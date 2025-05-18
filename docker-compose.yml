@@ -1,0 +1,38 @@
+version: '3.9'
+
+services:
+  db:
+    build:
+      context: ./db
+      dockerfile: Dockerfile
+    working_dir: /app/db
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./db:/app/db
+      - db_node_modules:/app/db/node_modules
+    command: node index.js
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    working_dir: /app/frontend
+    ports:
+      - "5173:5173"
+      - "24678:24678" # Vite HMR port
+    volumes:
+      - ./frontend:/app/frontend
+      - frontend_node_modules:/app/frontend/node_modules
+    command: yarn dev
+    environment:
+      - HOST=0.0.0.0
+      - NODE_ENV=${NODE_ENV}
+      - VITE_ENTRYPOINT_ADDRESS=${ENTRYPOINT_ADDRESS}
+      - VITE_ZK_EMAIL_VERIFIER_EMAIL=${ZK_EMAIL_VERIFIER_EMAIL}
+      - VITE_ZK_EMAIL_VERIFIER_URL=${ZK_EMAIL_VERIFIER_URL}
+      - VITE_ZK_PASSPORT_VERIFIER_ADDRESS=${ZK_PASSPORT_VERIFIER_ADDRESS}
+
+volumes:
+  db_node_modules:
+  frontend_node_modules:
