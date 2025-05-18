@@ -1,8 +1,8 @@
-import useAccount from "@/hooks/useAccount";
-import { verifyOnChain } from "@/passport";
-import { ProofResult, QueryResult, ZKPassport } from "@zkpassport/sdk";
-import { BrowserProvider } from "ethers";
-import { useEffect, useState } from "react";
+import useAccount from '@/hooks/useAccount';
+import { verifyOnChain } from '@/passport';
+import { ProofResult, QueryResult, ZKPassport } from '@zkpassport/sdk';
+import { BrowserProvider } from 'ethers';
+import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,14 +11,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { AnimatePresence, motion } from "framer-motion";
-import { Badge } from "./ui/badge";
-import { Button } from "./ui/button";
-import { VERIFIER_EMAIL, VERIFIER_URL } from "@/const";
-import { Link } from "react-router";
+import { AnimatePresence, motion } from 'framer-motion';
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import { VERIFIER_EMAIL, VERIFIER_URL } from '@/const';
+import { Link } from 'react-router';
 import { QRCodeCanvas } from 'qrcode.react';
-import { Separator } from "./ui/separator";
-
+import { Separator } from './ui/separator';
 
 const Connection = () => {
   const {
@@ -148,7 +147,7 @@ const Connection = () => {
                   transition={{ duration: 0.25 }}
                   className="transition-opacity"
                 >
-                  {account?.name}
+                  {account?.name}({account?.address.substring(0, 10)}...)
                   {account?.isAdmin && (
                     <Badge
                       variant="outline"
@@ -300,9 +299,6 @@ const Connection = () => {
                         <div className="flex justify-evenly mt-2">
                           <Button onClick={signUp} className="w-[150px]">
                             Sign up
-                          </Button>
-                          <Button onClick={signUpHost} className="w-[150px]">
-                            Sign up as a host
                           </Button>
                         </div>
                       </div>

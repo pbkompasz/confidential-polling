@@ -7,6 +7,7 @@ interface IForm {
     struct Form {
         Field[] fields;
         uint256 id;
+        uint256 mainField;
     }
 
     struct FormData {
@@ -25,6 +26,7 @@ interface IForm {
         // 6 - choice w/ up to 8 options 0, 1, 2, 3, 4, 5, 6, 7
         EncryptedInputType encryptedInputType;
         uint256 requirementId;
+        string[] values;
     }
 
     enum EncryptedInputType {

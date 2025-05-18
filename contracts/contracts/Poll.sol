@@ -10,14 +10,26 @@ import { IEvent } from "./interfaces/IEvent.sol";
 import { IForm } from "./interfaces/IForm.sol";
 
 contract Poll is SepoliaZamaFHEVMConfig, IPoll, IEvent, IForm, Ownable {
-    // Examples
-    // euint8 IS_MALE = 1
-    // euint8 IS_OVER_18 = 10
-    // euint8 IS_EMPLOYED = 100
-    // Some who is all three 111
-    // Female employed minor 100
-
     Form[] private forms;
+
+    bool private requiresPassportValdation;
+    bool private requiresEmailValdation;
+
+    Status private status;
+    uint256 constant MIN_SUBMISSIONS = 10;
+    string private name;
+    string private description;
+    uint256 private maximumParticipants;
+    EvaluationType private evaluationType;
+    ValidationType private validationType;
+    StorageType private storageType;
+    uint8 private evaluationBatch = 1;
+
+    Submission[] private submissions;
+    uint256 private minSubmissions = 0;
+    uint256 private lastSubmissionEvaluated;
+
+    address[] analysts;
 
     /**
      * Create the bit fields for each binary constraint
@@ -39,12 +51,12 @@ contract Poll is SepoliaZamaFHEVMConfig, IPoll, IEvent, IForm, Ownable {
         require(_maximumParticpants > 0);
         name = _name;
         description = _description;
-        maximumParticiants = _maximumParticpants;
+        maximumParticipants = _maximumParticpants;
         evaluationBatch = _evaulationBatch;
         evaluationType = _evaluationType;
         validationType = _validationType;
         storageType = _storageType;
-        status = Status.Created;
+        status = Status.Planned;
         minSubmissions = _minSubmissions;
         requiresEmailValdation = _requireEmailValidation;
         requiresPassportValdation = _requirePassportValidation;
@@ -52,20 +64,24 @@ contract Poll is SepoliaZamaFHEVMConfig, IPoll, IEvent, IForm, Ownable {
         // onchainStorage.createEventEntry();
     }
 
+    function registerAnalysts(address analyst) public onlyOwner {
+        analysts.push(analyst);
+    }
+
     /**
      * Create a form that only containst fields w/ boolean and option values
      */
-    function createForm(Field[] memory fields) public onlyOwner {
+    function createForm(Field[] memory fields) public {
         forms.push();
         for (uint i = 0; i < fields.length; i++) {
             EncryptedInputType inputType = fields[i].encryptedInputType;
-            // // Only form w/ boolean or option can be added
-            // require(
-            //     inputType == EncryptedInputType.Ebool ||
-            //         inputType == EncryptedInputType.Choice2 ||
-            //         inputType == EncryptedInputType.Choice4 ||
-            //         inputType == EncryptedInputType.Choice8
-            // );
+            require(
+                inputType == EncryptedInputType.Ebool ||
+                    inputType == EncryptedInputType.Choice2 ||
+                    inputType == EncryptedInputType.Choice4 ||
+                    inputType == EncryptedInputType.Choice8
+            );
+            forms[forms.length - 1].mainField = 0;
             forms[forms.length - 1].fields.push(fields[i]);
         }
     }
@@ -86,54 +102,55 @@ contract Poll is SepoliaZamaFHEVMConfig, IPoll, IEvent, IForm, Ownable {
         return forms;
     }
 
-    function getDetails() public view returns (bool, bool, Status, uint8 participantThreshold, bool isThresholdMet) {
-        return (
-            requiresEmailValdation,
-            requiresPassportValdation,
-            status,
-            0,
-            false
-        );
+    function getDetails()
+        public
+        view
+        returns (string memory name, Status, string memory eventType, uint256 noParticipants, bool, bool)
+    {
+        return (name, status, "POLL", 0, requiresEmailValdation, requiresPassportValdation);
     }
 
-    bool private requiresPassportValdation;
-    bool private requiresEmailValdation;
-
-    Status private status;
-    uint256 constant MIN_SUBMISSIONS = 10;
-    string private name;
-    string private description;
-    uint256 private maximumParticiants;
-    EvaluationType private evaluationType;
-    ValidationType private validationType;
-    StorageType private storageType;
-    uint8 private evaluationBatch = 1;
-
-    Submission[] private submissions;
-    uint256 private minSubmissions = 0;
-    uint256 private lastSubmissionEvaluated;
-
-    function initEvent() public onlyOwner {
-        require(status == Status.Created);
-        status = Status.Initiated;
+    function getDetailsFull() public view returns (EventDetails memory) {
+        return
+            EventDetails({
+                name: name,
+                description: description,
+                host: owner(),
+                maximumParticipants: maximumParticipants,
+                evaluationType: evaluationType,
+                validationType: validationType,
+                storageType: storageType,
+                evaluationBatch: evaluationBatch,
+                minSubmissions: minSubmissions,
+                lastSubmissionEvaluated: lastSubmissionEvaluated,
+                eventType: "POLL",
+                requiresEmailValdation: requiresEmailValdation,
+                requiresPassportValdation: requiresPassportValdation,
+                status: status,
+                // participationThreshold: participationThreshold,
+                participationThreshold: 0,
+                // isThresholdMet: isThresholdMet,
+                isThresholdMet: true,
+                eventAddress: address(this)
+            });
     }
 
-    function startEvent() public onlyOwner {
-        require(status == Status.Initiated);
-        status = Status.Active;
+    function startEvent() public {
+        require(status == Status.Planned);
+        status = Status.Live;
     }
 
-    function stopEvent() public onlyOwner {
-        require(status == Status.Active);
+    function stopEvent() public {
+        require(status == Status.Live);
         require(submissions.length > MIN_SUBMISSIONS);
         if (minSubmissions != 0) {
             require(submissions.length > minSubmissions);
         }
-        status = Status.Finished;
+        status = Status.Completed;
     }
 
     function evaluateEvent() public onlyOwner {
-        require(status == Status.Finished);
+        require(status == Status.Completed);
         require(evaluationType == EvaluationType.Lazy);
         // Go over fields and create possible binary values in plaintext
         // Go over all submitted formData and create statistics
@@ -144,10 +161,17 @@ contract Poll is SepoliaZamaFHEVMConfig, IPoll, IEvent, IForm, Ownable {
     }
 
     /**
-     * Export the evaluation results
+     * When analyst wants to run a query, they have to pull an evaluation status(which data is ready to be processed), then through the Storage contract they
+     * can request the data.
      */
-    function exportResult() public view {}
+    function getEvaluationStatus() public {}
 
+    /**
+     *
+     * Submit offchain data's hash
+     * @param form Form id
+     * @param dataHash Submitted data hash
+     */
     function submitData(Form calldata form, uint256 dataHash) public {
         // Lazy data validity checking
         require(validationType == ValidationType.Lazy);
@@ -225,9 +249,10 @@ contract Poll is SepoliaZamaFHEVMConfig, IPoll, IEvent, IForm, Ownable {
     function createField(
         string memory name,
         EncryptedInputType encryptedInputType,
-        uint256 requirementId
+        uint256 requirementId,
+        string[] memory values
     ) public view onlyOwner returns (Field memory) {
-        Field memory field = Field(name, encryptedInputType, requirementId);
+        Field memory field = Field(name, encryptedInputType, requirementId, values);
         if (field.encryptedInputType == EncryptedInputType.Eaddress) {
             require(requirementId < requirementsAddress.length);
         } else if (field.encryptedInputType == EncryptedInputType.Euint64) {
@@ -338,5 +363,17 @@ contract Poll is SepoliaZamaFHEVMConfig, IPoll, IEvent, IForm, Ownable {
         }
 
         return (TFHE.select(TFHE.eq(toAdd, ZERO), TRUE, FALSE), false);
+    }
+
+    function getEventUserRole(address userAddress) public view returns (string memory) {
+        if (userAddress == owner()) {
+            return "HOST";
+        }
+        for (uint i = 0; i < analysts.length; i++) {
+            if (analysts[i] == userAddress) {
+                return "ANALYST";
+            }
+        }
+        return "USER";
     }
 }

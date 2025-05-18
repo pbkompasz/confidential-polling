@@ -24,7 +24,14 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import useEvent from '@/hooks/useEvent';
 import { toast } from 'sonner';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import useAccount from '@/hooks/useAccount';
+import { Status } from '@/types';
+import { createFhevmInstance, getInstance } from '@/fhevmjs';
+import { initFhevm } from 'fhevmjs';
+import { useEncrypt } from '@/hooks/useEncrypt';
+
+// TODO Fetch submission for user
 
 const Event = () => {
   const { eventId } = useParams();
@@ -36,25 +43,57 @@ const Event = () => {
     editEvent,
     cancelEvent,
     viewResults,
+    submitForm,
     selectEvent,
   } = useEvent();
+
+  const {
+    isConnected,
+    canStartEvent,
+    canStopEvent,
+    canCancelEvent,
+    canEditEvent,
+    account,
+  } = useAccount();
+
+  const [handles, setHandles] = useState<Uint8Array[]>([]);
+  const [encryption, setEncryption] = useState<Uint8Array>();
+
 
   useEffect(() => {
     selectEvent(eventId);
   }, []);
 
-  // NOTE Admins can submit their own polls/benchmarks
   const isAdmin = true;
+
+  const [fieldData, setFieldData] = useState<string[]>([]);
+
+  const submit = async () => {
+    const data = await Promise.all(fieldData.map(d => {
+    // return await encryptAmount(
+    //   selectedEvent?.eventAddress as `0x${string}`,
+    //   account.address,
+    //   BigInt(+fieldData[0]),
+    // );
+    }))
+    await submitForm
+  };
 
   return (
     <div className="p-2">
       {!selectedEvent && eventId && <>ERROR</>}
       <div className="flex gap-2 items-center">
-        <h1 className="max-w-[300px] overflow-hidden">
+        <h1 className="overflow-hidden">
           {selectedEvent ? (
             <>
               {selectedEvent.type === 'POLL' ? (
-                <>{eventId ? <>Poll#{eventId}</> : <>Poll select</>}</>
+                <>
+                  {eventId ? (
+                    <>Poll{' #' + eventId.substring(0, 10)}...</>
+                  ) : (
+                    <>Poll select</>
+                  )}
+                </>
               ) : (
                 <>Benchmark</>
               )}
@@ -63,79 +102,77 @@ const Event = () => {
             <>Event</>
           )}
         </h1>
-        <Badge variant="outline" className="max-h-[20px] mr-auto">
-          {selectedEvent?.status}
-        </Badge>
-        {/* <Select>
-          <SelectTrigger className="w-[180px] mt-[5px] text-white mr-auto">
-            <SelectValue className="text-white" placeholder="Select a form" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectLabel>Forms</SelectLabel>
-              {selectedEvent?.forms.map((form, index) => (
-                <SelectItem key={index} value={form.name}>
-                  {form.name}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select> */}
-        {selectedEvent?.results && selectedEvent?.status === 'COMPLETED' && (
-          <Button onClick={() => viewResults()} disabled={!selectedEvent}>
-            View results
-          </Button>
+        {selectedEvent?.status === Status.Completed && (
+          <Badge className="bg-yellow-500 mr-auto">Completed</Badge>
         )}
-        {isAdmin && selectedEvent?.status === 'PLANNED' && (
-          <Button
-            onClick={async () => {
-              try {
-                await startEvent();
-                toast('Event has been started', {});
-              } catch (error) {
-                toast.error('Error: Unable to start event', {});
-              }
-            }}
-            disabled={!selectedEvent}
-          >
-            Start
-          </Button>
+        {selectedEvent?.status === Status.Live && (
+          <Badge className="bg-green-500 mr-auto">Live</Badge>
         )}
-        {isAdmin && selectedEvent?.status === 'LIVE' && (
-          <Button
-            onClick={() => {
-              try {
-                stopEvent();
-                toast('Event has been started', {});
-              } catch (error) {
-                toast.error('Error: Unable to stop event', {});
-              }
-            }}
-            disabled={!selectedEvent}
-          >
-            Stop
-          </Button>
+        {selectedEvent?.status === Status.Planned && (
+          <Badge className="bg-blue-500 mr-auto">Planned</Badge>
         )}
-        {isAdmin && selectedEvent?.status !== 'COMPLETED' && (
-          <Button onClick={() => editEvent()} disabled={!selectedEvent}>
-            Edit
-          </Button>
-        )}
-        {isAdmin && selectedEvent?.status !== 'COMPLETED' && (
-          <Button
-            onClick={() => {
-              try {
-                cancelEvent();
-                toast('Event has been started', {});
-              } catch (error) {
-                toast.error('Error: Unable to cancel event', {});
-              }
-            }}
-            disabled={!selectedEvent}
-          >
-            Cancel
-          </Button>
-        )}
+        <Button onClick={() => viewResults()} disabled={!selectedEvent}>
+          Analytics
+        </Button>
+        {isAdmin &&
+          selectedEvent?.status === Status.Planned &&
+          canStartEvent(selectedEvent) && (
+            <Button
+              onClick={async () => {
+                try {
+                  await startEvent();
+                  toast('Event has been started', {});
+                } catch (error) {
+                  console.log(error);
+                  toast.error('Error: Unable to start event', {});
+                }
+              }}
+              disabled={!selectedEvent}
+            >
+              Start
+            </Button>
+          )}
+        {isAdmin &&
+          selectedEvent?.status === Status.Live &&
+          canStopEvent(selectedEvent) && (
+            <Button
+              onClick={() => {
+                try {
+                  stopEvent();
+                  toast('Event has been started', {});
+                } catch (error) {
+                  toast.error('Error: Unable to stop event', {});
+                }
+              }}
+              disabled={!selectedEvent}
+            >
+              Stop
+            </Button>
+          )}
+        {isAdmin &&
+          selectedEvent?.status !== Status.Completed &&
+          canEditEvent(selectedEvent) && (
+            <Button onClick={() => editEvent()} disabled={!selectedEvent}>
+              Edit
+            </Button>
+          )}
+        {isAdmin &&
+          selectedEvent?.status !== Status.Completed &&
+          canCancelEvent(selectedEvent) && (
+            <Button
+              onClick={() => {
+                try {
+                  cancelEvent();
+                  toast('Event has been started', {});
+                } catch (error) {
+                  toast.error('Error: Unable to cancel event', {});
+                }
+              }}
+              disabled={!selectedEvent}
+            >
+              Cancel
+            </Button>
+          )}
       </div>
       {/* Dynamically create the form */}
       {/* TODO Pick a form too */}
@@ -143,12 +180,11 @@ const Event = () => {
         {selectedEvent?.forms[0].fields.map((field, index) => (
           <div key={index} className="flex justify-between">
             <div>
-              <p>{field.name}</p>
-              <p>{field.description}</p>
+              <p>{field[0]}</p>
             </div>
             <div>
-              {field.type === 'OPTION' ? (
-                <Select disabled={selectedEvent.status !== 'LIVE'}>
+              {field[1] === 2 ? (
+                <Select disabled={selectedEvent.status !== Status.Live}>
                   <SelectTrigger className="w-[320px] mt-[5px] text-white">
                     <SelectValue
                       className="text-white"
@@ -158,7 +194,7 @@ const Event = () => {
                   <SelectContent>
                     <SelectGroup>
                       <SelectLabel>Polls</SelectLabel>
-                      {field.values?.map((value, index) => (
+                      {field[2]?.map((value, index) => (
                         <SelectItem key={index} value={value.value as string}>
                           {value.name}
                         </SelectItem>
@@ -167,7 +203,15 @@ const Event = () => {
                   </SelectContent>
                 </Select>
               ) : (
-                <Select disabled={selectedEvent.status !== 'LIVE'}>
+                <Select
+                  disabled={selectedEvent.status !== Status.Live}
+                  value={fieldData[index]}
+                  onValueChange={(val) => {
+                    const f = [...fieldData];
+                    f[index] = val;
+                    setFieldData(f);
+                  }}
+                >
                   <SelectTrigger className="w-[320px] mt-[5px] text-white">
                     <SelectValue
                       className="text-white"
@@ -176,9 +220,12 @@ const Event = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectLabel>Polls</SelectLabel>
-                      <SelectItem value={'yes'}>Yes</SelectItem>
-                      <SelectItem value={'no'}>No</SelectItem>
+                      <SelectLabel className="text-white">Polls</SelectLabel>
+                      {field[3].map((value, index) => (
+                        <SelectItem key={index} value={index as string}>
+                          {value}
+                        </SelectItem>
+                      ))}
                     </SelectGroup>
                   </SelectContent>
                 </Select>
@@ -186,42 +233,13 @@ const Event = () => {
             </div>
           </div>
         ))}
-        <Dialog>
-          <DialogTrigger
-            asChild
-            className="ml-auto"
-            disabled={selectedEvent?.status !== 'LIVE'}
-          >
-            <Button variant="outline" className="text-white">
-              Submit
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Edit profile</DialogTitle>
-              <DialogDescription>
-                Make changes to your profile here. Click save when you're done.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">
-                  Name
-                </Label>
-                <Input id="name" value="Pedro Duarte" className="col-span-3" />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="username" className="text-right">
-                  Username
-                </Label>
-                <Input id="username" value="@peduarte" className="col-span-3" />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="submit">Save changes</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <Button
+          className="ml-auto"
+          onClick={() => submit()}
+          disabled={!isConnected}
+        >
+          Submit
+        </Button>
       </div>
     </div>
   );

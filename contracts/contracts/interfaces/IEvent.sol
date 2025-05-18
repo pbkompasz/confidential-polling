@@ -3,11 +3,9 @@ pragma solidity ^0.8.24;
 
 interface IEvent {
     enum Status {
-        Created,
-        Initiated,
-        Active,
-        Inactive,
-        Finished
+        Planned,
+        Live,
+        Completed
     }
     struct Submission {
         address submitter;
@@ -44,5 +42,25 @@ interface IEvent {
         // is not stored in the storage, only present
         // as calldata
         Hybrid
+    }
+
+    struct EventDetails {
+        string name;
+        string description;
+        address host;
+        uint256 maximumParticipants;
+        EvaluationType evaluationType;
+        ValidationType validationType;
+        StorageType storageType;
+        uint256 evaluationBatch;
+        uint256 minSubmissions;
+        uint256 lastSubmissionEvaluated;
+        string eventType;
+        bool requiresEmailValdation;
+        bool requiresPassportValdation;
+        Status status;
+        uint256 participationThreshold;
+        bool isThresholdMet;
+        address eventAddress;
     }
 }

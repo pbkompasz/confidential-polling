@@ -57,6 +57,9 @@ app.get("/email-verification", (req, res) => {
   });
 });
 
+/**
+ * Register users
+ */
 app.post("/register", (req, res) => {
   const data = req.body;
   res.json({
@@ -65,6 +68,29 @@ app.post("/register", (req, res) => {
     received: data,
   });
 });
+
+/**
+ * Submit data
+ */
+app.post("/submit", (req, res) => {
+  const data = req.body;
+  let tx, storageId;
+  if (data.storageType === "OFFCHAIN") {
+    // Save locally
+    // Hash it
+    // Save hash onchain
+  } else {
+    // Send data directly to onchain
+  }
+
+  res.json({
+    message: "Submitted",
+    tx,
+    storageId,
+  });
+});
+
+
 
 const verifySignature = (message, signature) => {
   const recoveredAddress = ethers.utils.verifyMessage(message, signature);

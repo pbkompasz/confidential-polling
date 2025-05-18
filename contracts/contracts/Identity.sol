@@ -6,12 +6,24 @@ import { IZKPassportVerifier, ProofVerificationParams } from "./interfaces/IIden
 contract Identity {
     IZKPassportVerifier public zkPassportVerifier;
 
+    struct User {
+        bytes signature;
+        bytes32 passportIdentifier;
+    }
+
     // Map users to their verified unique identifiers
-    mapping(address => bytes32) public userIdentifiers;
+    mapping(address => User) public userIdentifiers;
 
     constructor(address _verifierAddress, address emailVerifierAddress) {
         zkPassportVerifier = IZKPassportVerifier(_verifierAddress);
         // zkEmailVerifier = IZKEmailVerifier(_verifierAddress);
+    }
+
+    function signUp(bytes memory signature) public {
+        userIdentifiers[msg.sender] = User({
+            signature: signature,
+            passportIdentifier: bytes32(0)
+        });
     }
 
     function registerPassport(ProofVerificationParams calldata params, bool isIDCard) public returns (bytes32) {
@@ -50,7 +62,7 @@ contract Identity {
         // in the mempool, essentially allowing someone else than intended to register
         // with the proof. We will soon provide a way to commit to custom data, so you can
         // bind the proof to the intended sender to prevent this.
-        userIdentifiers[msg.sender] = uniqueIdentifier;
+        userIdentifiers[msg.sender].passportIdentifier = uniqueIdentifier;
 
         return uniqueIdentifier;
     }

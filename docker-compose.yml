@@ -10,7 +10,6 @@ services:
       - "3000:3000"
     volumes:
       - ./db:/app/db
-      - db_node_modules:/app/db/node_modules
     command: node index.js
 
   frontend:
@@ -23,7 +22,6 @@ services:
       - "24678:24678" # Vite HMR port
     volumes:
       - ./frontend:/app/frontend
-      - frontend_node_modules:/app/frontend/node_modules
     command: yarn dev
     environment:
       - HOST=0.0.0.0

@@ -7,7 +7,6 @@ import { IEvent } from "./interfaces/IEvent.sol";
 import { Identity } from "./Identity.sol";
 import { IForm } from "./interfaces/IForm.sol";
 import { Storage } from "./Storage.sol";
-import { MyContract } from "./MyContract.sol";
 import "hardhat/console.sol";
 
 contract Entrypoint {
@@ -37,6 +36,10 @@ contract Entrypoint {
         identityRegistryAddress = address(identityRegistry);
         // onchainStorage = new Storage();
         // onchainStorageAddress = address(onchainStorage);
+    }
+
+    function getIdentityRegistryAddress() public view returns(address) {
+        return identityRegistryAddress;
     }
 
     function createPoll(
@@ -72,7 +75,7 @@ contract Entrypoint {
         });
         events.push(ev);
         emit PollCreated(msg.sender, address(poll));
-
+        return address(poll);
     }
 
     function addPoll(address pollAddress) public {
@@ -113,22 +116,37 @@ contract Entrypoint {
             true
         );
         IForm.Field[] memory fields = new IForm.Field[](3);
+        string[] memory genderValues = new string[](2);
+        genderValues[0]  = "Male";
+        genderValues[1]  = "Female";
         fields[0] = IForm.Field({
             name: "Gender",
             encryptedInputType: IForm.EncryptedInputType.Choice2,
-            requirementId: 0
+            requirementId: 0,
+            values: genderValues
         });
+        string[] memory ageValues = new string[](4);
+        ageValues[0]  = "18-29";
+        ageValues[1]  = "30-44";
+        ageValues[2]  = "45-59";
+        ageValues[3]  = "60-75";
         fields[1] = IForm.Field({
             name: "Age",
             encryptedInputType: IForm.EncryptedInputType.Choice4,
-            requirementId: 0
+            requirementId: 0,
+            values: ageValues
         });
+        string[] memory opinionValues = new string[](2);
+        opinionValues[0]  = "Agree";
+        opinionValues[1]  = "Disagree";
         fields[2] = IForm.Field({
             name: "Opinion",
             encryptedInputType: IForm.EncryptedInputType.Ebool,
-            requirementId: 0
+            requirementId: 0,
+            values: opinionValues
         });
 
         Poll(pollAddress).createForm(fields);
+        Poll(pollAddress).startEvent();
     }
 }

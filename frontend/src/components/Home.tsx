@@ -40,8 +40,19 @@ import {
 } from '@/components/ui/form';
 import { POLL } from '../const.ts';
 import { Input } from './ui/input.tsx';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
+import useAccount from '@/hooks/useAccount.ts';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './ui/tooltip.tsx';
+import { Badge } from './ui/badge.tsx';
+import { Devnet } from '../components/Devnet';
+import { Connect } from '../components/Connect/index.ts';
+import { init } from '@/fhevmjs.ts';
 
 export const FormSchema = z.object({
   kyc_required: z.boolean().default(false).optional(),
@@ -57,9 +68,38 @@ export const FormSchema = z.object({
 });
 
 const Home = () => {
-  const { events, createEvent, createForm } = useEvent();
+  const { events, createEvent, createForm, getDetailedEvents } = useEvent();
+  const [detailedEvents, setDetailedEvents] = useState([]);
+
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    // Trick to avoid double init with HMR
+    if (window.fhevmjsInitialized) return;
+    window.fhevmjsInitialized = true;
+    init()
+      .then(() => {
+        setIsInitialized(true);
+      })
+      .catch((e) => {
+        console.log(e);
+        setIsInitialized(false);
+      });
+  }, []);
+
+
+  useEffect(() => {
+    (async () => {
+      const detailedEvents = await getDetailedEvents(
+        events.map((event) => event[1]),
+      );
+      setDetailedEvents(detailedEvents);
+    })();
+  }, [events]);
 
   const [isOpen, setIsOpen] = useState(false);
+
+  const { isConnected } = useAccount();
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
@@ -91,7 +131,7 @@ const Home = () => {
       const eventAddress = await createEvent(data);
       toast(`New ${data.type.toLowerCase()} created`);
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      await createForm(eventAddress as string, data);
+      await createForm(eventAddress, data);
       toast(`Added form`);
       setIsOpen(false);
     } catch (error) {
@@ -100,6 +140,8 @@ const Home = () => {
       setIsOpen(false);
     }
   }
+
+  if (!isInitialized) return null;
 
   return (
     <div className="p-2 flex flex-col text-center">
@@ -123,7 +165,7 @@ const Home = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {events.map((event) => (
+            {detailedEvents.map((event) => (
               <TableRow key={event.eventAddress}>
                 <TableCell className="font-medium">
                   <div className="">
@@ -134,18 +176,18 @@ const Home = () => {
                 </TableCell>
                 {/* <TableCell>{event.status}</TableCell> */}
                 <TableCell>
-                  {event.eventType === POLL ? 'Poll' : 'Benchmark'}
+                  {event.eventType === 'POLL' ? 'Poll' : 'Benchmark'}
                 </TableCell>
                 <TableCell className="text-right">
-                  {/* {event.participants.length} */}
+                  {event.noParticipants}
                 </TableCell>
                 <TableCell className="text-right ">
-                  {/* {!event.emailValidationReqquired &&
-                  !event.passportValidationReqquired ? (
+                  {!event.requiresEmailValidation &&
+                  !event.requiresPassportValidation ? (
                     <>No extra KYC required</>
                   ) : (
                     <div className="flex flex-row-reverse items-center gap-2">
-                      {event.passportValidationReqquired && (
+                      {event.requiresPassportValidation && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -164,7 +206,7 @@ const Home = () => {
                           </Tooltip>
                         </TooltipProvider>
                       )}
-                      {event.emailValidationReqquired && (
+                      {event.requiresEmailValidation && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -183,20 +225,30 @@ const Home = () => {
                           </Tooltip>
                         </TooltipProvider>
                       )}
-                    </div> */}
-                  {/* )} */}
+                    </div>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
 
+        {/* <Connect>
+          {(account, provider) => (
+            <Devnet account={account} provider={provider} />
+          )}
+        </Connect> */}
+
         <p className="text-xl">
           Register as a host and create a new polling/benchmarking survey
         </p>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild className="ml-auto my-[20px]">
-            <Button variant="outline" className="text-white ">
+            <Button
+              disabled={!isConnected}
+              variant="outline"
+              className="text-white "
+            >
               <p className="text-md">Create survey</p>
             </Button>
           </DialogTrigger>
@@ -388,22 +440,22 @@ const Home = () => {
       <div className="p-2">
         <p className="text-2xl">How it works</p>
         <div className="flex justify-evenly gap-2 mt-3">
-          <div className="border w-[300px] h-[170px] p-2">
-            <p>1. Host creates a poll or benchmarking survey</p>
-            <p></p>
+          <div className="border w-[300px] h-[120px] p-2 text-center flex items-center">
+            <p className="my-auto">
+              1. User signs up as a host and creates a poll or benchmarking
+              survey
+            </p>
           </div>
-          <div className="border w-[300px] h-[170px] p-2">
+          <div className="border w-[300px] h-[120px] p-2 text-center flex items-center">
             <p>
               2. Users fill out the forms and submit their data confidentially
             </p>
-            <p></p>
           </div>
-          <div className="border w-[300px] h-[170px] p-2">
+          <div className="border w-[300px] h-[120px] p-2 text-center flex items-center">
             <p>
               3. Analysts can take the confidential data and analize it without
-              revealing any users response
+              revealing any users' response
             </p>
-            <p></p>
           </div>
         </div>
       </div>

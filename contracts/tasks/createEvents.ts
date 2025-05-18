@@ -13,18 +13,14 @@ task("create-events", "Create events")
     const ContractFactory = await hre.ethers.getContractFactory("Entrypoint");
     const contractInstance = ContractFactory.attach(contract).connect(deployer);
 
-    const result = await contractInstance["generateDemoEvents"]({
-      gasLimit: 5_000_000, // you can increase this if needed
-    });
+    if (!contractInstance["createPoll"]) {
+      console.error(`Method createPoll not found on contract.`);
+      return;
+    }
 
-    // if (!contractInstance["createPoll"]) {
-    //   console.error(`Method createPoll not found on contract.`);
-    //   return;
-    // }
-
-    // // const result = await contractInstance["createPoll"](...["My poll", "Just polling", 100, 20, 0, 0, 0, 10]);
-    // const result = await contractInstance["generateDemoEvents"]();
-    // console.log("Result:", result);
+    // const result = await contractInstance["createPoll"](...["My poll", "Just polling", 100, 20, 0, 0, 0, 10]);
+    const result = await contractInstance["generateDemoEvents"]();
+    console.log("Result:", result);
 
     events.push({
       address: "",

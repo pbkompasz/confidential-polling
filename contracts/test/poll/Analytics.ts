@@ -89,4 +89,10 @@ describe("Analytics", function () {
 
     expect(plaintextValue).to.eq(parseInt("1111", 2));
   });
+
+  it("V2: should create tree", async function () {});
+
+  it("V2: should calculate sum from a node", async function () {});
+
+  it("V2: should calculate sum from multiple nodes", async function () {});
 });

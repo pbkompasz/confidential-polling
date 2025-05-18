@@ -1,5 +1,15 @@
-import { BrowserProvider, ethers, JsonRpcProvider, JsonRpcSigner, Wallet } from 'ethers';
-import { createContext, useState } from 'react';
+import {
+  BrowserProvider,
+  ethers,
+  JsonRpcProvider,
+  JsonRpcSigner,
+  Wallet,
+} from 'ethers';
+import { createContext, useEffect, useState } from 'react';
+import { Event } from '@/types';
+import { demoAccounts, ENTRYPOINT_ADDRESS } from '@/const';
+import { entrypointAbi, identityAbi } from '@/abi';
+import { createDemoFhevmInstance } from '@/fhevmjs';
 
 type AccountContextType = {
   isConnected: any;
@@ -8,13 +18,17 @@ type AccountContextType = {
   account: any;
   signIn: any;
   signUp: any;
-  signUpHost: any;
   signOut: any;
   useDemoAccount: any;
   signer: any;
   browserProvider: any;
   addEmail: any;
   addPassport: any;
+  canStartEvent: any;
+  canStopEvent: any;
+  canCancelEvent: any;
+  canEditEvent: any;
+  canQuery: any;
 };
 
 export const AccountContext = createContext<AccountContextType | undefined>(
@@ -29,32 +43,27 @@ export const AccountProvider = ({ children }: { children: any }) => {
     name: string;
     isAdmin?: boolean;
   }>();
-  const [browserProvider, setBrowserProvider] = useState<BrowserProvider | JsonRpcProvider>();
+  const [browserProvider, setBrowserProvider] = useState<
+    BrowserProvider | JsonRpcProvider
+  >();
   const [signer, setSigner] = useState<JsonRpcSigner | Wallet>();
-  const [isPassportVerified] = useState(true);
-  const [isEmailVerified] = useState(true);
+  const [isPassportVerified, setIsPassportVerified] = useState(false);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
 
-  const demoAccounts = [
-    {
-      address: '0x3500438F95D4CCc2e6cd00ab2EbC4ed979D8218c',
-      privateKey:
-        '0x54b873583b06adad015e9e3f6496011ad62aa6330728bbcedea2a1f17fdb396b',
-      name: 'Alice',
-      isAdmin: true,
-    },
-    {
-      address: '0x9EBA6Aa76418E8A560E7E0002670C54B5d8a8790',
-      privateKey:
-        '0x5208b7e6153189c2d50d8eb57db7a99f0248153c1e04164e6b5fc54fafa7ddba',
-      name: 'Bob',
-    },
-    {
-      address: '0x8Fb434616E5DCb006653DaB81DB5b427A412458a',
-      privateKey:
-        '0xfb6e299fc78a41ed1a1492fd04660e960361e33e594f4da5ed6fb266ce1cd2a5',
-      name: 'Carol',
-    },
-  ];
+  useEffect(() => {
+    (async () => {
+      if (isConnected) {
+        console.log('here');
+        await createDemoFhevmInstance(
+          browserProvider as JsonRpcProvider,
+          signer as JsonRpcSigner,
+        );
+      } else {
+        setIsPassportVerified(false);
+        setIsEmailVerified(false);
+      }
+    })();
+  }, [isConnected]);
 
   const signIn = async () => {
     const provider = new ethers.BrowserProvider(window.ethereum);
@@ -68,8 +77,6 @@ export const AccountProvider = ({ children }: { children: any }) => {
 
     const message = 'Sign up';
     const signature = await signer.signMessage(message);
-
-    // Check if user has account, if not create
 
     setAccount({
       name: signer.address,
@@ -88,33 +95,30 @@ export const AccountProvider = ({ children }: { children: any }) => {
 
     console.log('User address:', address);
 
-    const message = 'Sign up';
-    const signature = await signer.signMessage(message);
-
     // Save account, if already have return false
     await switchToHardhat();
 
-    setAccount({
-      name: signer.address,
-      address: signer.address,
-    });
-    setIsConnected(true);
-  };
-
-  const signUpHost = async () => {
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    setBrowserProvider(provider);
-    await provider.send('eth_requestAccounts', []);
-    const signer = await provider.getSigner();
-    setSigner(signer);
-    const address = await signer.getAddress();
-
-    console.log('User address:', address);
-
-    const message = 'Sign up as host';
+    const message = 'Sign up';
     const signature = await signer.signMessage(message);
 
-    // Save account, if already have return false
+    // Check if user has account, if not create
+    const entrypointContract = new ethers.Contract(
+      ENTRYPOINT_ADDRESS,
+      entrypointAbi,
+      provider,
+    );
+
+    const identityRegistry =
+      await entrypointContract.getIdentityRegistryAddress();
+    const identityContract = new ethers.Contract(
+      identityRegistry,
+      identityAbi,
+      provider,
+    );
+    const contractWithSigner = identityContract.connect(signer);
+    // @ts-expect-error
+    const tx = await contractWithSigner.signUp(signature);
+    await tx.wait();
 
     setAccount({
       name: signer.address,
@@ -138,10 +142,35 @@ export const AccountProvider = ({ children }: { children: any }) => {
     const account = demoAccounts[id];
     setAccount(account);
     setIsConnected(true);
-    const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545"); // Or use an Infura/Alchemy endpoint
+    const provider = new ethers.JsonRpcProvider('http://127.0.0.1:8545');
     const wallet = new ethers.Wallet(account.privateKey, provider);
     setSigner(wallet);
     setBrowserProvider(provider);
+  };
+
+  const canStartEvent = (event?: Event) => {
+    if (!account || !event) return false;
+    return account?.address === event?.host;
+  };
+
+  const canStopEvent = (event?: Event) => {
+    if (!account || !event) return false;
+    return account?.address === event?.host;
+  };
+
+  const canCancelEvent = (event?: Event) => {
+    if (!account || !event) return false;
+    return account?.address === event?.host;
+  };
+
+  const canEditEvent = (event?: Event) => {
+    if (!account || !event) return false;
+    return account?.address === event?.host;
+  };
+
+  const canQuery = (event?: Event) => {
+    if (!account || !event) return false;
+
   };
 
   return (
@@ -153,13 +182,17 @@ export const AccountProvider = ({ children }: { children: any }) => {
         account,
         signIn,
         signUp,
-        signUpHost,
         signOut,
         useDemoAccount,
         signer,
         browserProvider,
         addEmail,
         addPassport,
+        canStartEvent,
+        canStopEvent,
+        canCancelEvent,
+        canEditEvent,
+        canQuery
       }}
     >
       {children}

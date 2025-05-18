@@ -1,4 +1,5 @@
-import { isAddress } from 'ethers';
+import { ethers, isAddress, JsonRpcProvider, JsonRpcSigner } from 'ethers';
+import { Eip1193Bridge } from 'eip1193bridge';
 import { initFhevm, createInstance, FhevmInstance } from 'fhevmjs/bundle';
 import {
   getPublicKey,
@@ -50,6 +51,41 @@ export const createFhevmInstance = async () => {
   });
   instance = await instancePromise;
   const pp = instance.getPublicParams(2048);
+  if (pp) {
+    await storePublicParams(ACL_ADDRESS, pp);
+  }
+  const pk = instance.getPublicKey();
+  if (pk) {
+    await storePublicKey(ACL_ADDRESS, pk);
+  }
+};
+
+export const createDemoFhevmInstance = async (provider: JsonRpcProvider, signer: JsonRpcSigner) => {
+  if (instancePromise) return instancePromise;
+  const storedPublicKey = await getPublicKey(ACL_ADDRESS);
+  const publicKey = storedPublicKey?.publicKey;
+  const publicKeyId = storedPublicKey?.publicKeyId;
+  const storedPublicParams = await getPublicParams(ACL_ADDRESS);
+  const publicParams = storedPublicParams
+    ? {
+        '2048': storedPublicParams,
+      }
+    : null;
+
+  const bridge = new Eip1193Bridge(signer, provider);
+
+  instancePromise = createInstance({
+    network: bridge,
+    aclContractAddress: ACL_ADDRESS,
+    kmsContractAddress: import.meta.env.VITE_KMS_ADDRESS,
+    gatewayUrl: import.meta.env.VITE_GATEWAY_URL,
+    publicKey,
+    publicKeyId,
+    publicParams,
+  });
+  instance = await instancePromise;
+  const pp = instance.getPublicParams(2048);
+  console.log(pp)
   if (pp) {
     await storePublicParams(ACL_ADDRESS, pp);
   }

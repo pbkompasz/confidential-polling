@@ -52,7 +52,7 @@ This results in an approximate complexity of `O(n*2 + n*2^noConstraint)`, which 
 
 This approach is really convenient when we want to add or remove a constraint. It would take up to 3 bit-shifts left or right and an addition.
 
-Other ideas that could work include creating a **"search tree"**, where each branch represents a possible constraint value. Then at each child node, we would have a data structure that accumulates the values. The downside is that we would have to push data into multiple branches to avoid revealing other submitters to the current submitter and store an encrypted flag to notify if a value is valid or just a decoy.
+Other ideas that could work include creating a **"search tree"**, where each branch represents a possible constraint value. Then at each child node, we would have a data structure that accumulates the values. The downside is that we would have to push data into multiple branches to avoid revealing other submitters to the current submitter and store an encrypted flag to notify if a value is valid or just a decoy. Or a bundler can submit the data.
 
 ## Data Validation
 
@@ -93,6 +93,8 @@ Deployed contracts:
 
 To run locally run the following command:
 
+Create a `.env` file based on the `.env.example` provided.
+
 ```bash
 docker compose -f docker-compose.dev.yml up
 ```
@@ -114,3 +116,4 @@ npx hardhat create-events --contract ${ENTRYPOINT_CONTRACT_ADDRESS} --network ${
 
 - [ ] Email address registration
 - [ ] Benchmarks
+- [ ] The survey page only works with 1 form per survey
