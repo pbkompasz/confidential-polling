@@ -3,84 +3,79 @@ pragma solidity ^0.8.24;
 
 import "fhevm/lib/TFHE.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { IForm } from "./interfaces/IForm.sol";
 
-contract Forms is Ownable {
-    struct Field {
-        string name;
-        bool isEncrypted;
-        // -1 - non encrypted fields
-        // 0 - eaddress
-        // 1 - ebool
-        // 2 - euint64
-        // 3 - ebytes64
-        int8 encryptedInputType;
-        uint256 requirementId;
-    }
-
-    struct RequirementBytes {
-        bytes[] forbiddenValues;
-    }
-    struct RequirementAddress {
-        address[] forbiddenValues;
-    }
-    struct RequirementUint {
-        uint256 min;
-        uint256 max;
-        uint256[] forbiddenValues;
-    }
+// TODO Set option values
+contract Forms is Ownable, IForm {
     RequirementBytes[] requirementsBytes;
     RequirementAddress[] requirementsAddress;
-    RequirementUint[] requirementsUint;
+    RequirementUint[] requirementsEuint;
 
     uint8 constant MAX_FIELDS = 10;
-    uint256 fieldNo;
 
+    // This are confidential constants that have to be defined at runtime
     euint8 ZERO;
     euint8 ONE;
     ebool TRUE;
     ebool FALSE;
 
-    Field[] fields;
-
-    constructor(Field[] memory _fields) Ownable(msg.sender) {
-        assert(_fields.length < MAX_FIELDS);
-        // Create the form
-        for (uint i = 0; i < _fields.length; i++) {
-            fields.push(_fields[i]);
-        }
-        fieldNo = _fields.length;
-
+    constructor() Ownable(msg.sender) {
         ZERO = TFHE.asEuint8(0);
         ONE = TFHE.asEuint8(1);
         TRUE = TFHE.asEbool(true);
         FALSE = TFHE.asEbool(false);
     }
 
+    function _createForm(Field[] memory _fields) internal view onlyOwner returns (Form memory) {
+        Form memory f = Form({ fields: _fields });
+
+        return f;
+    }
+
+    function createField(
+        string memory name,
+        EncryptedInputType encryptedInputType,
+        uint256 requirementId
+    ) public view onlyOwner returns (Field memory) {
+        Field memory field = Field(name, encryptedInputType, requirementId);
+        if (field.encryptedInputType == EncryptedInputType.Eaddress) {
+            require(requirementId < requirementsAddress.length);
+        } else if (field.encryptedInputType == EncryptedInputType.Euint64) {
+            require(requirementId < requirementsEuint.length);
+        } else if (field.encryptedInputType == EncryptedInputType.Ebytes64) {
+            require(requirementId < requirementsBytes.length);
+        }
+        return field;
+    }
+
     /**
      * Check all the submitted data
      */
-    function validateForm() public {}
+    function validateForm(Form memory form, einput input, bytes calldata inputProof) public {
+        for (uint i = 0; i < form.fields.length; i++) {
+            validateField(form.fields[i], input, inputProof);
+        }
+    }
 
-    function validateField(uint256 fieldId, einput input, bytes calldata inputProof) public {
-        Field memory field = fields[fieldId];
-        assert(field.isEncrypted == true);
-        if (field.encryptedInputType == 0) {
+    function validateField(Field memory field, einput input, bytes memory inputProof) public {
+        if (field.encryptedInputType == EncryptedInputType.Eaddress) {
             eaddress encryptedAddress = TFHE.asEaddress(input, inputProof);
-            validateEaddress(fieldId, encryptedAddress);
-        } else if (field.encryptedInputType == 1) {
+            validateEaddress(field.requirementId, encryptedAddress);
+        } else if (field.encryptedInputType == EncryptedInputType.Ebool) {
             TFHE.asEbool(input, inputProof);
-        } else if (field.encryptedInputType == 2) {
+        } else if (field.encryptedInputType == EncryptedInputType.Euint64) {
             euint64 encryptedEuint = TFHE.asEuint64(input, inputProof);
-            validateEuint64(fieldId, encryptedEuint);
-        } else if (field.encryptedInputType == 3) {
+            validateEuint64(field.requirementId, encryptedEuint);
+        } else if (field.encryptedInputType == EncryptedInputType.Ebytes64) {
             ebytes64 encryptedEbytes = TFHE.asEbytes64(input, inputProof);
-            validateEbytes64(fieldId, encryptedEbytes);
+            validateEbytes64(field.requirementId, encryptedEbytes);
         }
     }
 
     /**
      *  Checks that the submitted address is not in one of the blacklisted values
-     *  The return value returns an encrypted bool and plaintext bool, if the plaintext is true we accept it otherwise we have to rely on the encrypted value
+     *  The return value returns an encrypted bool and plaintext bool, if the plaintext is true we accept it
+     *  otherwise we have to rely on the encrypted value
      * @param requirementId Requirement id
      * @param encrytpedAddress Encrypted address
      */
@@ -109,8 +104,8 @@ contract Forms is Ownable {
      * @param encrytpedEuint64 Encrypted euint64
      */
     function validateEuint64(uint256 requirementId, euint64 encrytpedEuint64) private returns (ebool, bool) {
-        assert(requirementId < requirementsUint.length);
-        RequirementUint memory requirement = requirementsUint[requirementId];
+        assert(requirementId < requirementsEuint.length);
+        RequirementUint memory requirement = requirementsEuint[requirementId];
         if (requirement.forbiddenValues.length == 0) {
             return (TFHE.asEbool(true), true);
         }
@@ -153,13 +148,5 @@ contract Forms is Ownable {
         }
 
         return (TFHE.select(TFHE.eq(toAdd, ZERO), TRUE, FALSE), false);
-    }
-
-    function submit(uint8 fieldId, einput param, bytes calldata inputProof) public {}
-
-    function bytesToAddress(bytes memory bys) private pure returns (address addr) {
-        assembly {
-            addr := mload(add(bys, 20))
-        }
     }
 }
