@@ -14,33 +14,41 @@ import { IForm } from "./interfaces/IForm.sol";
  * @notice
  */
 contract Storage is Ownable {
-    // TODO Might have to cast them beforehand
-    struct EncryptedData {
-        einput[] inputs;
-        bytes inputProof;
+    struct OffchainData {
+        uint256 databaseId;
     }
 
     // eventAddress => formId => IMT
-    mapping(address => mapping(uint256 => LeanIMTData)) offchainData;
+    mapping(address => mapping (uint256 => mapping (address => bytes32))) dataRegistry;
     // eventAddress => formId => user => formData[]
-    mapping(address => mapping(uint256 => mapping(address => IForm.FormData[]))) onchainData;
+    mapping(bytes32 => IForm.FormData) onchainData;
+    mapping(bytes32 => OffchainData) offchainData;
 
     /**
      * The owner is the bundler
      */
     constructor() Ownable(msg.sender) {}
 
-    function submitData(IForm.Form calldata form, uint256 dataHash) public {
-        LeanIMT.insert(offchainData[msg.sender][form.id], dataHash);
+    /**
+     * Submit the hash of an encrypted data
+     * @param form Form
+     * @param owner Owner
+     * @param dataHash  hash of data
+     */
+    function submitData(address eventAddress, IForm.Form calldata form, address owner, bytes32 dataHash, uint256 databaseId) public {
+        require(dataRegistry[eventAddress][form.id][owner] == dataHash);
+        offchainData[dataRegistry[eventAddress][form.id][owner]] = OffchainData({
+            databaseId: databaseId
+        });
     }
 
-    function submitData(IForm.Form calldata form, IForm.FormData calldata formData) public {
-        onchainData[msg.sender][form.id][tx.origin].push(formData);
+    function submitData(address eventAddress, IForm.Form calldata form, address owner, IForm.FormData calldata formData) public {
+        // uint256 dataHash = hash(formData);
+        // require(dataHash == dataRegistry[eventAddress][form.id][owner]);
+        onchainData[dataRegistry[eventAddress][form.id][owner]] = formData;
     }
 
-    function submitDataV2() public {}
-
-    function createEventEntry() public {
-        msg.sender;
+    function createDataEntry(address eventAddress, uint256 formId, bytes32 dataHash) public {
+        dataRegistry[eventAddress][formId][msg.sender] = dataHash;
     }
 }

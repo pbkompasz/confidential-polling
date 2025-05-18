@@ -8,8 +8,9 @@ import "fhevm/config/ZamaGatewayConfig.sol";
 import "fhevm/gateway/GatewayCaller.sol";
 
 // How it works
-// Create the tree
-// Expect caller to provide data or fetch it from Storage
+// Create a tree for a form's fields
+// Insert formData into field, go over the fields, and calculate the correct node
+// Run operations e.g. SUM, AVG, on the evaluated data
 
 /**
  * A tree is constructed where each branch represents a possible data point. For example if a field takes 3 answers a decision node would have 3 branches.
@@ -51,18 +52,12 @@ contract AnalyticsV2 is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, Gatewa
 
     function appendToTree() public {}
 
-    // TODO Check cache
-    // Return value?
-    // TODO Batches
-    // TODO Check if storage contains data
     function sum(
         IForm.Field[] memory fields,
         IForm.FormData[] memory data,
         uint256[] memory constraintFields,
         uint8[] memory constraintValues
-    ) public {
-        // Traverse
-    }
+    ) public {}
 
     function operation(
         // IForm.Field[] memory fields,

@@ -106,6 +106,59 @@ export const entrypointAbi = [
 
 export const eventAbi = [
   {
+    inputs: [
+      {
+        internalType: 'uint256',
+        name: 'formId',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'dataHash',
+        type: 'uint256',
+      },
+    ],
+    name: 'submitDataOffchain',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'uint256',
+        name: 'formId',
+        type: 'uint256',
+      },
+      {
+        internalType: 'bytes32',
+        name: 'dataHash',
+        type: 'bytes32',
+      },
+      {
+        components: [
+          {
+            internalType: 'bytes32[]',
+            name: 'inputs',
+            type: 'bytes32[]',
+          },
+          {
+            internalType: 'bytes',
+            name: 'inputProof',
+            type: 'bytes',
+          },
+        ],
+        internalType: 'struct FormData',
+        name: 'formData',
+        type: 'tuple',
+      },
+    ],
+    name: 'submitDataOnchain',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
     inputs: [],
     name: 'startEvent',
     outputs: [],

@@ -1,4 +1,5 @@
 import { BENCHMARK, ENTRYPOINT_ADDRESS, POLL, VERIFIER_URL } from '@/const';
+import crypto from 'crypto';
 import { BrowserProvider, ethers } from 'ethers';
 import { createContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -28,7 +29,7 @@ type ThemeContextType = {
   cancelEvent: () => {};
   getEvents: () => Promise<any>;
   viewResults: () => void;
-  submitForm: () => {};
+  submitForm: any;
   createEvent: (data: z.infer<typeof FormSchema>) => Promise<void>;
   createForm: (
     eventAddress: string,
@@ -236,33 +237,6 @@ export const EventProvider = ({ children }: { children: any }) => {
     const details = await eventContract.getDetailsFull();
     const forms = await eventContract.getForms();
 
-    // forms[0].map(f => {
-    //     // Name
-    //     console.log(f[0][0])
-    //     // EncrypteionType
-    //     console.log(f[0][1])
-    //     // Requiremnt id
-    //     // console.log(f[0][2])
-    //     // return {
-    //     //   fields: [
-    //     //     {
-    //     //       name: form[0][0],
-    //     //       encryptedInputType: parseInt(form[0][1]),
-    //     //       requirementId: form[0][2],
-    //     //       values: form[0][3]
-    //     //     }
-    //     //   ],
-    //     //   id: form[1],
-    //     //   mainField: form[2],
-    //     // };
-    //     return f
-    // });
-
-    // console.log(details);
-    // console.log(forms[0][0][0]);
-    // console.log(forms[0][0][1][3]);
-    // console.log(details[13])
-
     return {
       name: details[0],
       description: details[1],
@@ -286,18 +260,56 @@ export const EventProvider = ({ children }: { children: any }) => {
   };
 
   /**
-   * Submit data to the bundler
+   * Submit data to onchain storage or offchain storage via the bundler
    */
-  const submitForm = async (data: any[], inputProof: any) => {
-    // Submit data for bundler
-    await fetch(`${VERIFIER_URL}/submit`, {
-      method: 'post',
-      body: JSON.stringify({
-        data,
-        inputProof,
-      }),
-    });
-    // Create entry in SC
+  const submitForm = async (formId: number, data: any[], inputProof: any) => {
+    if (!selectedEvent) return;
+
+    const eventContract = new ethers.Contract(
+      selectedEvent.eventAddress,
+      eventAbi,
+      provider,
+    );
+    const contractWithSigner = eventContract.connect(signer);
+
+    let tx;
+    if (selectedEvent.storageType === StorageType.Onchain) {
+      tx = await contractWithSigner.submitDataOnchain(
+        formId,
+        {
+          inputs: data,
+          inputProof,
+        },
+        {
+          gasLimit: 300_000,
+        },
+      );
+    } else {
+      const serialized = JSON.stringify(data);
+      const dataHash = crypto
+        .createHash('sha256')
+        .update(serialized)
+        .digest('hex');
+      tx = await contractWithSigner.submitDataOffchain(formId, dataHash, {
+        gasLimit: 300_000,
+      });
+
+      // Submit data for bundler
+      await fetch(`${VERIFIER_URL}/submit`, {
+        method: 'post',
+        body: JSON.stringify({
+          data: {
+            data,
+            eventAddress: selectedEvent.eventAddress,
+            dataHash,
+            formId,
+          },
+          inputProof,
+        }),
+      });
+    }
+
+    await tx.wait();
   };
 
   const selectEvent = async (eventAddress: string) => {
@@ -332,48 +344,3 @@ export const EventProvider = ({ children }: { children: any }) => {
     </EventContext.Provider>
   );
 };
-
-//  {
-//     address: '0x26BfbD8ED2B302ec2c2B6f063C4caF7abcB062e0',
-//     admin: '0x26BfbD8ED2B302ec2c2B6f063C4caF7abcB062e0',
-//     type: 'POLL',
-//     participants: [],
-//     analysts: [],
-//     results: {},
-//     forms: [
-//       {
-//         name: 'A form',
-//         fields: [
-//           {
-//             name: 'Age',
-//             description: 'Select your age group',
-//             type: 'OPTION',
-//             values: [
-//               {
-//                 value: '0',
-//                 name: '18-34',
-//               },
-//               {
-//                 value: '1',
-//                 name: '35-49',
-//               },
-//               {
-//                 value: '2',
-//                 name: '49-75',
-//               },
-//             ],
-//           },
-//           {
-//             name: 'Support',
-//             description: 'Do you support ...?',
-//             type: 'BOOLEAN',
-//           },
-//         ],
-//       },
-//     ],
-//     emailValidationReqquired: true,
-//     passportValidationReqquired: true,
-//     status: 'COMPLETED',
-//     participantThreshold: 10,
-//     isThresholdMet: false,
-//   },

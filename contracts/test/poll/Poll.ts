@@ -13,30 +13,20 @@ describe("Poll", function () {
   before(async function () {
     await initSigners();
     this.signers = await getSigners();
-    // const storage = await deployStorageContract();
-    // const contract = await deployPollingContract(await storage.getAddress());
-    // const contract = await deployPollingContract();
-    // this.contractAddress = await contract.getAddress();
-    // this.pollContract = contract;
-    const entrypointContract = await deployEntrypointContract();
-    this.entrypoint = entrypointContract;
-    this.entrypointAddress = await entrypointContract.getAddress();
-    // 0 -
-    // 0 -
-    // 0 -
-    this.pollAddress = await entrypointContract.createPoll("My poll", "Just polling", 100, 20, 0, 0, 0, 10, true, true);
-    // this.benchmarkAddress = await entrypointContract.createBenchmark("My poll", "Just polling", 100, 20, 0, 0, 0, 10);
+    const contract = await deployPollingContract();
+    this.contractAddress = await contract.getAddress();
+    this.pollContract = contract;
     this.fhevm = await createInstance();
   });
 
   it("should try every poll operation(start, stop, edit)", async function () {
-    // const status = await this.pollContract.getStatus();
-    // expect(status).to.equal(0);
+    const status = await this.pollContract.getStatus();
+    expect(status).to.equal(0);
 
-    // await this.pollContract.initPoll();
+    await this.pollContract.initPoll();
 
-    // await this.pollContract.startPoll();
-    // await this.polling.stopPoll();
+    await this.pollContract.startPoll();
+    await this.polling.stopPoll();
   });
 
   it("should add new form, submit data, validate and evaluate data", async function () {
@@ -65,27 +55,8 @@ describe("Poll", function () {
     ];
 
     // Create form as host
-    // const tx = await this.pollContract.createForm(FieldStruct);
-    // await tx.wait();
-
-    // Switch to other user
-    // const pollAsBob = this.pollContract.connect(this.signers.bob);
-
-    // Submit data
-
-    // Check if validation passed and was evaluated
-
-    // Reencrypt Alice's balance
-    // const balanceHandleAlice = await this.erc20.balanceOf(this.signers.alice);
-    // const balanceAlice = await reencryptEuint64(
-    //   this.signers.alice,
-    //   this.fhevm,
-    //   balanceHandleAlice,
-    //   this.contractAddress,
-    // );
-    // expect(balanceAlice).to.equal(1000);
-    // const totalSupply = await this.erc20.totalSupply();
-    // expect(totalSupply).to.equal(1000);
+    const tx = await this.pollContract.createForm(FieldStruct);
+    await tx.wait();
   });
 
   it("should submit data w/ eager validation, eager evaluation", async () => {});

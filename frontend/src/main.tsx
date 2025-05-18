@@ -9,6 +9,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider } from '@material-tailwind/react';
 import { EventProvider } from './context/EventContext.tsx';
 import { AccountProvider } from './context/AccountContext.tsx';
+import { EncryptProvider } from './context/EncryptContext.tsx';
 
 const queryClient = new QueryClient();
 
@@ -18,11 +19,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <ThemeProvider>
-            <AccountProvider>
-              <EventProvider>
-                <App />
-              </EventProvider>
-            </AccountProvider>
+            <EncryptProvider>
+              <AccountProvider>
+                <EventProvider>
+                  <App />
+                </EventProvider>
+              </AccountProvider>
+            </EncryptProvider>
           </ThemeProvider>
         </BrowserRouter>
       </QueryClientProvider>

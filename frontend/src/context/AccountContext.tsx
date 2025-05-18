@@ -53,7 +53,6 @@ export const AccountProvider = ({ children }: { children: any }) => {
   useEffect(() => {
     (async () => {
       if (isConnected) {
-        console.log('here');
         await createDemoFhevmInstance(
           browserProvider as JsonRpcProvider,
           signer as JsonRpcSigner,

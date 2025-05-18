@@ -9,17 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 import { Badge } from '@/components/ui/badge';
 import useEvent from '@/hooks/useEvent';
@@ -27,9 +16,8 @@ import { toast } from 'sonner';
 import { useEffect, useState } from 'react';
 import useAccount from '@/hooks/useAccount';
 import { Status } from '@/types';
-import { createFhevmInstance, getInstance } from '@/fhevmjs';
-import { initFhevm } from 'fhevmjs';
-import { useEncrypt } from '@/hooks/useEncrypt';
+import useEncrypt from '@/hooks/useEncrypt';
+import { getInstance } from '@/fhevmjs';
 
 // TODO Fetch submission for user
 
@@ -53,12 +41,43 @@ const Event = () => {
     canStopEvent,
     canCancelEvent,
     canEditEvent,
-    account,
   } = useAccount();
 
-  const [handles, setHandles] = useState<Uint8Array[]>([]);
-  const [encryption, setEncryption] = useState<Uint8Array>();
+  const { account, loading, connected } = useEncrypt();
 
+  const CONTRACT_ADDRESS = '0x309cf2aae85ad8a1db70ca88cfd4225bf17a7482';
+  const instance = getInstance();
+
+  const [eip712, setEip712] =
+    useState<ReturnType<typeof instance.createEIP712>>();
+
+  // Handle EIP712 setup
+  useEffect(() => {
+    const { publicKey } = instance.generateKeypair();
+    const eip = instance.createEIP712(publicKey, CONTRACT_ADDRESS);
+    setEip712(eip);
+  }, [instance]);
+
+  const encrypt = async () => {
+    if (loading || !connected) return;
+    const now = Date.now();
+    try {
+      let input = await instance.createEncryptedInput(
+        CONTRACT_ADDRESS,
+        account,
+      );
+      fieldData.forEach((data) => {
+        input.add16(+data);
+      });
+      const result = await input.encrypt();
+
+      console.log(`Took ${(Date.now() - now) / 1000}s`);
+      return result;
+    } catch (e) {
+      console.error('Encryption error:', e);
+      console.log(Date.now() - now);
+    }
+  };
 
   useEffect(() => {
     selectEvent(eventId);
@@ -69,14 +88,8 @@ const Event = () => {
   const [fieldData, setFieldData] = useState<string[]>([]);
 
   const submit = async () => {
-    const data = await Promise.all(fieldData.map(d => {
-    // return await encryptAmount(
-    //   selectedEvent?.eventAddress as `0x${string}`,
-    //   account.address,
-    //   BigInt(+fieldData[0]),
-    // );
-    }))
-    await submitForm
+    const resp = await encrypt();
+    await submitForm(resp?.handles, resp?.inputProof);
   };
 
   return (

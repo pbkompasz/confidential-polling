@@ -7,24 +7,9 @@ import { IEvent } from "./interfaces/IEvent.sol";
 import { Identity } from "./Identity.sol";
 import { IForm } from "./interfaces/IForm.sol";
 import { Storage } from "./Storage.sol";
-import "hardhat/console.sol";
+import { IEntrypoint } from "./interfaces/IEntrypoint.sol";
 
-contract Entrypoint {
-
-    event PollCreated(address indexed sender, address newValue);
-
-    enum EventType {
-        Benchmark,
-        Poll
-    }
-
-    struct _Event {
-        EventType eventType;
-        address eventAddress;
-        address host;
-        address admin;
-    }
-
+contract Entrypoint is IEntrypoint {
     _Event[] private events;
     Identity private identityRegistry;
     address private identityRegistryAddress;
@@ -38,7 +23,7 @@ contract Entrypoint {
         // onchainStorageAddress = address(onchainStorage);
     }
 
-    function getIdentityRegistryAddress() public view returns(address) {
+    function getIdentityRegistryAddress() public view returns (address) {
         return identityRegistryAddress;
     }
 
@@ -64,8 +49,7 @@ contract Entrypoint {
             _storageType,
             _minSubmissions,
             _requirePassportValidation,
-            _requireEmailValidation//,
-            // onchainStorageAddress
+            _requireEmailValidation 
         );
         _Event memory ev = _Event({
             eventType: EventType.Poll,
@@ -78,6 +62,10 @@ contract Entrypoint {
         return address(poll);
     }
 
+    /**
+     * Add a deployed poll to the list of polls
+     * @param pollAddress Deployed poll's address
+     */
     function addPoll(address pollAddress) public {
         // TODO Check not added
         _Event memory ev = _Event({
@@ -89,18 +77,29 @@ contract Entrypoint {
         events.push(ev);
     }
 
-    function createBenchmark() public {
-        require(false);
-    }
+    /**
+     * TODO
+     */
+    // function createBenchmark() public {
+    // }
 
+    /**
+     * Return list of polls and benchmarks
+     */
     function getEvents() public view returns (_Event[] memory) {
         return events;
     }
 
+    /**
+     * Get number of polls
+     */
     function getEventsLength() public view returns (uint256) {
         return events.length;
     }
 
+    /**
+     * Genrate demo events
+     */
     function generateDemoEvents() public {
         // Partial poll
         address pollAddress = createPoll(
@@ -117,8 +116,8 @@ contract Entrypoint {
         );
         IForm.Field[] memory fields = new IForm.Field[](3);
         string[] memory genderValues = new string[](2);
-        genderValues[0]  = "Male";
-        genderValues[1]  = "Female";
+        genderValues[0] = "Male";
+        genderValues[1] = "Female";
         fields[0] = IForm.Field({
             name: "Gender",
             encryptedInputType: IForm.EncryptedInputType.Choice2,
@@ -126,10 +125,10 @@ contract Entrypoint {
             values: genderValues
         });
         string[] memory ageValues = new string[](4);
-        ageValues[0]  = "18-29";
-        ageValues[1]  = "30-44";
-        ageValues[2]  = "45-59";
-        ageValues[3]  = "60-75";
+        ageValues[0] = "18-29";
+        ageValues[1] = "30-44";
+        ageValues[2] = "45-59";
+        ageValues[3] = "60-75";
         fields[1] = IForm.Field({
             name: "Age",
             encryptedInputType: IForm.EncryptedInputType.Choice4,
@@ -137,8 +136,8 @@ contract Entrypoint {
             values: ageValues
         });
         string[] memory opinionValues = new string[](2);
-        opinionValues[0]  = "Agree";
-        opinionValues[1]  = "Disagree";
+        opinionValues[0] = "Agree";
+        opinionValues[1] = "Disagree";
         fields[2] = IForm.Field({
             name: "Opinion",
             encryptedInputType: IForm.EncryptedInputType.Ebool,

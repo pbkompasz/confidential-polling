@@ -4097,7 +4097,7 @@ fflate@^0.8.0:
 
 fhevmjs@^0.6.2:
   version "0.6.2"
-  resolved "https://registry.npmjs.org/fhevmjs/-/fhevmjs-0.6.2.tgz"
+  resolved "https://registry.yarnpkg.com/fhevmjs/-/fhevmjs-0.6.2.tgz#ed976da53e46923b8ce91e33f716eb36b1718294"
   integrity sha512-Kiq59DiqusavaCft8AzSVF2G92ZrNyf3u2dmu3zqlOxK5TGXAIY7PNICrV4xvT+pVxiAF88auNP+tH/dFqx1iA==
   dependencies:
     bigint-buffer "^1.1.5"

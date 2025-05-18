@@ -8,6 +8,8 @@ import "fhevm/config/ZamaGatewayConfig.sol";
 import "fhevm/gateway/GatewayCaller.sol";
 import { IAnalytics } from "./interfaces/IAnalytics.sol";
 
+// NOTE This is obsolete and AnalyticsV2 should be used instead
+
 contract Analytics is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCaller, IAnalytics {
     euint8 bINARY_SEPARATOR_ENCRYPTED;
     euint8 cHOICE2_SEPARATOR_ENCRYPTED;
@@ -81,7 +83,7 @@ contract Analytics is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayC
     }
 
     function getEncryptedConstraint() public view returns (euint16) {
-      return encryptedConstraint;
+        return encryptedConstraint;
     }
 
     // TODO Check cache
@@ -132,4 +134,6 @@ contract Analytics is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayC
         //     }
         // }
     }
+
+    function evaluateData(einput[] memory inputs, bytes memory inputProof) external override {}
 }

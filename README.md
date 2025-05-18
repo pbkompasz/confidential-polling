@@ -13,7 +13,6 @@
 ## Architecture
 ![Untitled-2024-10-29-2230-2](https://github.com/user-attachments/assets/c1f40057-92e9-4376-8930-7b19afeff978)
 
-To offer a fast, provable, and cost-efficient solution, we use Incremental Merkle Trees (IMTs).
 The whole architecture is modular and can accept different configuration variables:
 - data storage: onchain or offchain
 - evaluation type, eager or lazy

@@ -73,10 +73,10 @@ contract Poll is SepoliaZamaFHEVMConfig, IPoll, IEvent, IForm, Ownable {
         requiresEmailValdation = _requireEmailValidation;
         requiresPassportValdation = _requirePassportValidation;
 
-        ZERO = TFHE.asEuint8(0);
-        ONE = TFHE.asEuint8(1);
-        TRUE = TFHE.asEbool(true);
-        FALSE = TFHE.asEbool(false);
+        // ZERO = TFHE.asEuint8(0);
+        // ONE = TFHE.asEuint8(1);
+        // TRUE = TFHE.asEbool(true);
+        // FALSE = TFHE.asEbool(false);
 
         // onchainStorage = Storage(_onchainStorageAddress);
         // onchainStorage.createEventEntry();
@@ -137,34 +137,31 @@ contract Poll is SepoliaZamaFHEVMConfig, IPoll, IEvent, IForm, Ownable {
     /**
      *
      * Submit offchain data's hash
-     * @param form Form id
+     * @param formId Form id
      * @param dataHash Submitted data hash
      */
-    function submitData(Form calldata form, uint256 dataHash) public {
+    function submitDataOffchain(uint256 formId, bytes32 dataHash) public {
         // Lazy data validity checking
         require(validationType == ValidationType.Lazy);
         // Lazy evaluation
         require(evaluationType == EvaluationType.Lazy);
         // Off-chain storage, we need to append the Merkle tree
         require(storageType == StorageType.Offchain);
-        // TODO Save to IMT
 
         // onchainStorage.insert(form, dataHash);
     }
 
     /**
      * Submit data in batches
-     * TODO This should only be the hashes and a pointer to storage entry
-     * or insert through this IDK
-     * @param form Form
+     * @param formId Form id
      * @param formData Form data
      */
-    function submitData(Form calldata form, FormData calldata formData) public {
+    function submitDataOnchain(uint256 formId, FormData calldata formData) public {
         // Off-chain storage, we need to append the Merkle tree
         require(storageType == StorageType.Onchain || storageType == StorageType.Hybrid);
         // Check the batch size meets minimum
 
-        validateFormData(form, formData);
+        // validateFormData(form, formData);
 
         // onchainStorage.insert(form, formData);
     }
@@ -174,7 +171,7 @@ contract Poll is SepoliaZamaFHEVMConfig, IPoll, IEvent, IForm, Ownable {
      * @param form Form
      * @param formData Form data, an array of einputs w/ input proof
      */
-    function validateFormData(Form memory form, FormData memory formData) private {
+    function validateFormData(Form memory form, FormData memory formData) public {
         require(form.fields.length == formData.inputs.length);
         for (uint i = 0; i < form.fields.length; i++) {
             validateField(form.fields[i], formData.inputs[i], formData.inputProof);
