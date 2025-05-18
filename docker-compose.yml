@@ -1,6 +1,14 @@
 version: '3.9'
 
 services:
+  mongodb:
+    image: mongo:6
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
   db:
     build:
       context: ./db
@@ -11,6 +19,10 @@ services:
     volumes:
       - ./db:/app/db
     command: node index.js
+    depends_on:
+      - mongodb
+    environment:
+      - MONGO_URL=mongodb://mongo:27017/mydatabase
 
   frontend:
     build:
@@ -34,3 +46,4 @@ services:
 volumes:
   db_node_modules:
   frontend_node_modules:
+  mongodb_data:
