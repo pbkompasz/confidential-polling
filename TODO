@@ -1,0 +1,81 @@
+<!-- To win https://github.com/zama-ai/bounty-program/issues/144
+# Admin logs in with EOA or passkeys but participant can log in w/ EOA, passkeys and passport
+  Use porto and self.xyz, which I will have to utilize anyways for Noirhack
+  https://docs.self.xyz/contract-integration/basic-integration
+  https://porto.sh/
+# Merkle trees (or Verkle trees if time) to improve efficiency
+  https://github.com/polytope-labs/solidity-merkle-trees
+  https://soliditydeveloper.com/merkle-tree
+  https://github.com/zcash/incrementalmerkletree
+  https://github.com/merkletreejs/merkletreejs/blob/master/src/IncrementalMerkleTree.ts
+  https://github.com/OpenZeppelin/openzeppelin-contracts/issues/4758
+  https://github.com/privacy-scaling-explorations/zk-kit/tree/main/packages/imt
+# Third interface for analysts
+  Calculates in batches
+  Users will have 3 different roles: admin, participant
+ -->
+
+<!-- TODO
+  1. Identities
+    1.1 Email             If I have time
+    1.2 Passport         NEED TO HOOK UP the backend
+    1.3 Porto  X
+    1.4 Demo accounts    DONE
+  2. Custom analytics     This is the main task for tomorrow
+  3. Tests            Some are done, will only do basic testing to run the app
+  4. Frontend w/ roles,             Have to wire it up
+  5. Storage architecture w/ IMTs       Kinda DONE
+  6. Maybe benchmark specific features IDK what specifically gas, etc.
+  7. README w/ drawings
+    https://github.com/0xalexbel/fhe-single-price-auction
+    https://github.com/RegisGraptin/ConfidentialAuction/
+    https://github.com/palra/zama-bounty-confidential-auction
+  8. Create an in-progress poll that finishes after the user submits their data
+  9. Record video         Last thing tomorrow
+    Okay so this is the survey platform, here we have a list of polls and benchmarks, some are ongoing and some are planned
+    We can see on this poll that it requires email verification and identity verification, for this we log into our account w/ our wallet
+    and go to our account. Here we can link both our passport and email, to link an email we request a OTP and send it to the email address.
+    A background service listens for new emails a generates an ownership proof when the email arrives. To link a passport to our account
+    we use ZKPassport and to do this we have to download the app, set up our passport and scan the QR code. Once we approve the request a proof
+    of ownership("humanity") is generated. Both of these proofs are verified onchain.
+    Now that we completed the KYC process we can go the poll, fill out the form and submit it. This form utilizies eager evaluation.
+    we can go into the host account and close the poll. This will also create the data that will be presented in the analytics tab.
+    Here we can see the number of participants and other details. The form data is broken down by a number of constraints, for example we can
+    see the number of male, 18-29 year olds that voted yes for the survey.
+  10. docker  DONE
+ -->
+
+<!-- TODO
+  1. Sign up   Kinda done, make sure Sepolia and hardhat is accounted for
+  2. Sign up as a host
+  3. Demo account w/ proper functionalities   DONE
+  4. Home page shows a list of events       DONE, have to fetch it
+  5. Home page cleanup,   DONE
+  6. Event page pull   Should work          DONE, single form only
+  7. Main tasks: submitData and evaluate. Have to:
+        1. Encrypt the data
+        2. Hash it (in an ordered array?)
+        3. Store the encrypted in db
+        4. Publish the ash
+        5. At evaluation submit the encrypted, check the hash and finally compute
+ -->
+
+ <!-- Rewrite to bundler architecture
+ 
+  DATA   DATA    DATA 
+  -->
+
+ <!-- 
+If I have the following test case and I deploy to contracts, than I get a "Coprocessor address mismatch". 
+getAddress and store it in the test harness class????
+Trace:
+     Error: VM Exception while processing transaction: reverted with reason string 'Coprocessor address mismatch'
+    at <UnrecognizedContract>.<unknown> (0x3a2da6f1dae9ef988b48d9cf27523fa31a8ebe50)
+    at <UnrecognizedContract>.<unknown> (0x687408ab54661ba0b4aef3a44156c616c6955e07)
+    at <UnrecognizedContract>.<unknown> (0x24abc9757b6749b53204dd5bc49cfca8c097c274)
+    at EdrProviderWrapper.request (node_modules/.pnpm/hardhat@2.24.0_bufferutil@4.0.9_ts-node@10.9.2_@types+node@18.19.100_typescript@5.8.3__typesc_xs6fvcyxuhc4oak6ghmt5lmmfy/node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:359:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/.pnpm/@nomicfoundation+hardhat-ethers@3.0.8_ethers@6.14.0_bufferutil@4.0.9_utf-8-validate@5.0.10__h_hdpqhlyeihttbvcujuitfzkklm/node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:125:18)
+    at async send (node_modules/.pnpm/ethers@6.14.0_bufferutil@4.0.9_utf-8-validate@5.0.10/node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.createEncryptedQueryConstraint (node_modules/.pnpm/ethers@6.14.0_bufferutil@4.0.9_utf-8-validate@5.0.10/node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async Context.<anonymous> (test/poll/Analytics.ts:71:5)
+  -->
