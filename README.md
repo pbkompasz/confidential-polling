@@ -1,87 +1,113 @@
 # Confidential Benchmarking and Polling
 
+## About
+
 ## Features
 
-- [x] Confidential benchmarking
-- [x] Define custom data models
-- [x] Define custom data models
-
-<!-- To win https://github.com/zama-ai/bounty-program/issues/144
-# Admin logs in with EOA or passkeys but participant can log in w/ EOA, passkeys and passport
-  Use porto and self.xyz, which I will have to utilize anyways for Noirhack
-  https://docs.self.xyz/contract-integration/basic-integration
-  https://porto.sh/
-# Merkle trees (or Verkle trees if time) to improve efficiency
-  https://github.com/polytope-labs/solidity-merkle-trees
-  https://soliditydeveloper.com/merkle-tree
-  https://github.com/zcash/incrementalmerkletree
-  https://github.com/merkletreejs/merkletreejs/blob/master/src/IncrementalMerkleTree.ts
-  https://github.com/OpenZeppelin/openzeppelin-contracts/issues/4758
-  https://github.com/privacy-scaling-explorations/zk-kit/tree/main/packages/imt
-# Third interface for analysts
-  Calculates in batches
-  Users will have 3 different roles: admin, analyst, participant
-# Store the encrypted data on IPFS and submit hash
-  Add to Merkle tree
-  Verify Merkle proof
- -->
+- Confidential benchmarking and polling
+- Custom forms: Hosts can define custom forms
+- Encrypted data submissions:
+- Private KYC: w/ zk proofs, including email and passport
+- Custom analytics:
 
 ## Architecture
 
-To offer a fast, provable and cheap solution we use IMTs(Incremental Merkle Tree) with a predefined number of elements.
-At each submission the new hash, the old Merkle proof and the expected root hash is submitted. Given these we can calculate the new root and make sure that tree is only modified and not completely rewritten.
-The initial data is stored off-chain i.e. IPFS, VPS and is requested at computation. The requested data is submitted for computation in batches and only the parts that are required for computation. This is done in the calldata which is pruned from the full node and is cheaper.
+<!-- TODO Pic
+  frontend(self, zkemail, etc.) -> onchain, hybrid(IMT) or offchain(IMT) storage -> (polling or benchmarking -> event(check status, etc.) -> form (validation, evaluation) -> Store the result in a relation database -> Back to the frontend
+ -->
 
-There are two particular data structures that can be used, one optimized for repeated analytics and another one that is only used for single calculations.
+To offer a fast, provable, and cost-efficient solution, we use Incremental Merkle Trees (IMTs).
 
-### Eager evaluation
+The initial data is stored off-chain and is fetched when analytics query is requested. Data is submitted for computation in batches, including only the parts required for that computation. This data is sent via calldata, which is pruned from the full node, making it more cost-effective.
 
-Eager evaluation utilizes a much more comples data structure, a "big" binary tree structure where for each constraint we have bifurcation and the end nodes are IMTs.
-For example if the data we collect is age and nationality and the constraints are "is over 18" and "not on OFAC list" we would have 4 IMTs.
-The algorithm calculates the node position for each response received and the has of the data is inserted in the corresponding IMT.  
-When an analytics calculation is performed, simply the non-zero child nodes in the corresponding IMTs are calculated.
-Computation can also happen, for example we can calculate the average age for each "over 18" by summing the received data and storing it in the IMT root. When we want to get the value we add the two IMTs values and decrypt them.
-This more complex structure, but it has many benefits, if the analytics will happen large number of times and if we want to keep some intermediary data on-chain.
-<!-- NOTE it can be 3^no_contraints or 4... -->
-This solution is powerful if the number 2^(no_contraints) is greater than no_participants and we want to perform more than no_participant computations.
+The poll/benchmark event proceeds through three stages:
 
-### Lazy evaluation
+- Planned stage: After a host creates a poll or benchmark event, it enters this stage during which users cannot submit data.
+- Live stage: Users submit encrypted data to the poll. Depending on the configuration, the data can be processed either immediately upon submission or after the event concludes.
+- Completed stage: The data is evaluated (if not processed continuously during the live stage), and analysts can query the data based on custom constraints. These queries are cached, so the data does not need to be recalculated in the future.
 
-This option stores all the received data in a Incremental Merkle Tree and generates survey computations on the data on demand. This is very useful for things like confidential "straw polls" or events where the data is ephemeral. 
+### Analytics
 
-## Participation incentives
+An analyst can request constrained counts on poll forms and constrained operations (SUM, AVG, MAX, MIN, COUNT) on benchmark data.  
+The analyst specifies the constraint fields; given this and the input types, we create a binary uint. Then we iterate over every submitted data point, XOR them, cache the response, and return the value.
 
-More than just knowing there are also monetary incentives for participating in the survey....
-We can set up incentives in a way that we can hit a sweet spot that is statistically relevant (e.g. >1000 participants) and not too computationally intensive(e.g. MoE too high and not worth it).
-With FHE we can adjust this incentive multipliers based on the data received in a given batch. This way we can ask for relevant data while not sharing sensitive information of the users.
+This value for a poll is just a count, and for benchmarks, we can specify a field and an operation that we want to perform.
+
+For example:
+
+- **Poll** with fields `gender`, `ageGroup`, and `T/F`. If we want to get a breakdown of all the males in the 29-44 age group that voted, we create the following value:  
+  `00000010`, where from right to left:
+
+  - `0` = male
+  - `01` = the second age group.
+
+- **Salary benchmark** with fields `gender`, `ageGroup`, `position`, and `brut salary`. If we want to get a breakdown of all the females, programmers, 45-60 age group, and get their average salary:  
+  The constraint value is `00110101`, where from right to left:
+  - `1` = female
+  - `10` = the third age group
+  - `011` = the programmer value
+  - The operation field is salary, and the operation is AVG (we cache SUM and COUNT values).
+
+If we want to calculate the number of respondents with 2 binary fields and 100,000 submissions, we would have to do:  
+`100,000 * 2 \_ 2 (Create constraint string) + 100,000 (XOR) + 100,100 (ADD);`  
+This results in an approximate complexity of `O(n*2 + n*2^noConstraint)`, which is roughly `O(n)`.
+
+This approach is really convenient when we want to add or remove a constraint. It would take up to 3 bit-shifts left or right and an addition.
+
+Other ideas that could work include creating a **"search tree"**, where each branch represents a possible constraint value. Then at each child node, we would have a data structure that accumulates the values. The downside is that we would have to push data into multiple branches to avoid revealing other submitters to the current submitter and store an encrypted flag to notify if a value is valid or just a decoy.
 
 ## Data Validation
 
-The submitted data is verified both in the dApp interface before submission and at computation time on-chain.
-Each data "packet" has a list of verification criteria that the data has to pass.
+The submitted data is verified both in the dApp interface before submission and at computation time on-chain.  
+There are two validation types: **eager** and **lazy**.
+
+- **Eager validation** means that data is validated at submission time, for each submission individually.
+- **Lazy validation** means that data is either validated at the end of the survey or in batches while the survey is ongoing.
 
 ## Scalability
 
-Thanks to Incremental Merkle Trees and batched execution the survey can serve a high number of participants. You can check the benchmarks below where the estimated gas costs and execution time is presented for various number of participants e.g. 1000.
+By opting to use the most favorable settings (lazy evaluation with lazy validation), and thanks to Incremental Merkle Trees and batched execution, the survey can support a high number of participants.
 
-### Gas Benchmarks
+You can check the benchmarks below where the estimated gas costs and execution times are presented for various numbers of participants, e.g., 1000.
 
-n = 10
-n = 100
-n = 100.000
+The complexity of creating an analytics query is:
+O(n * 2^(noBinaryConstraints - 1) + n * 4^(noChoice4Constraints) + n * 8^(noChoice*Constraints))
 
-| Submissions                      | Gas cost | Performance |
-| -------------------------------- | -------- | ----------- |
-| `n=100` and `perBatch=3`         |          |             |
-| `n=1_000` and `perBatch=20`      |          |             |
-| `n=1_000_000` and `perBatch=150` |          |             |
+| Submissions                              | Gas Cost | Performance |
+| ---------------------------------------- | -------- | ----------- |
+| `n=100`, `noConstraints=3`, action=COUNT |          |             |
+| `n=1,000`, `evaluationBatch=20`          |          |             |
 
 ## KYC and Proof of Humanity
 
-[Civic Pass](https://docs.civic.com/pass/use-cases/smart-contract-development) is used to verify liveness of a person.
-[Self](https://self.xyz) is a password verification mechanism that uses zero-knowledge proofs and users can selective share their information.
-[ZK Email](https://prove.email/) is a service that allows users to perform onchain actions by sending emails.
-Through [Porto](porto.sh) we can use passkeys to create an account.
+[ZK Passport](https://self.xyz) is a password verification mechanism that uses zero-knowledge proofs, allowing users to selectively share their information.  
+[ZK Email](https://prove.email/) is a service that enables users to perform on-chain actions by sending emails.
 
-These tools allow the event organizer to select the amount of authentication they desire, a user could only need to verify their email or they would have to perform an extensive KYC and password verification. This adds flexibility to the registration flow on the platform.  
-Furthermore a users main identifier is their "passkey wallet" to which other external identifiers are linked. These are proofs of ownership and do not reveal anything about the user only if they want to.
+These tools allow the event organizer to choose the level of authentication they require. For example, a user might only need to verify their email, or they might have to undergo an extensive KYC and password verification. This adds flexibility to the registration flow on the platform.  
+
+Furthermore, a user’s main identifier is their **"passkey wallet"**, to which other external identifiers are linked. These serve as proofs of ownership and do not reveal any personal information unless the user consents to share it.
+
+Currently, these methods only verify that the user has a valid email or passport, but they can be further enhanced by asking users to disclose certain personal data (e.g., age) or prove that they are not in a sanctioned country.
+
+## How to Run
+
+Deployed contracts:
+
+To run locally run the following command:
+
+```bash
+docker compose -f docker-compose.dev.yml up
+```
+
+Disclaimer, the identity verification only works on Sepolia testnet.
+
+To connect to the Sepolia contracts run
+
+```bash
+docker compose -f docker-compose.test.yml up
+```
+
+## Known issues/TODOs
+
+- [ ] Email address registration
+- [ ] Benchmarks
