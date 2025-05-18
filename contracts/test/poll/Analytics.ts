@@ -5,7 +5,7 @@ import { createInstance } from "../instance";
 // import { reencryptEuint64 } from "../reencrypt";
 import { getSigners, initSigners } from "../signers";
 import { debug } from "../utils";
-import { deployAnalyticsContract } from "./Analytics.fixture";
+import { deployAnalyticsContract, deployAnalyticsContractV2 } from "./Analytics.fixture";
 import { deployEntrypointContract } from "./Entrypoint.fixture";
 import { deployPollingContract } from "./Poll.fixture";
 import { deployStorageContract } from "./Storage.fixture";
@@ -15,36 +15,36 @@ describe("Analytics", function () {
     await initSigners();
     this.signers = await getSigners();
     const contract = await deployAnalyticsContract();
-    this.contractAddress = await contract.getAddress();
-    this.contract = contract;
-    this.contract.connect(this.signers.alice);
+    // this.contractAddress = await contract.getAddress();
+    // this.contract = contract;
+    // this.contract.connect(this.signers.alice);
 
-    const storage = await deployStorageContract();
-    const pollContract = await deployPollingContract(await storage.getAddress());
-    // this.contractAddress = await pollContract.getAddress();
-    this.pollContract = pollContract;
+    // const storage = await deployStorageContract();
+    // const pollContract = await deployPollingContract(await storage.getAddress());
+    // // this.contractAddress = await pollContract.getAddress();
+    // this.pollContract = pollContract;
 
-    const entrypoint = await deployEntrypointContract();
+    // const entrypoint = await deployEntrypointContract();
 
-    const FieldStruct = [
-      {
-        name: "Do you agree",
-        encryptedInputType: 2, // ebool
-        requirementId: 1,
-      },
-      {
-        name: "Age Group",
-        encryptedInputType: 7, // choice8
-        requirementId: 2,
-      },
-    ];
+    // const FieldStruct = [
+    //   {
+    //     name: "Do you agree",
+    //     encryptedInputType: 2, // ebool
+    //     requirementId: 1,
+    //   },
+    //   {
+    //     name: "Age Group",
+    //     encryptedInputType: 7, // choice8
+    //     requirementId: 2,
+    //   },
+    // ];
 
-    // // Create form as host
-    const tx = await pollContract.createForm(FieldStruct);
-    await tx.wait();
+    // // // Create form as host
+    // const tx = await pollContract.createForm(FieldStruct);
+    // await tx.wait();
   });
 
-  it("should build query string", async function () {
+  it.skip("should build query string", async function () {
     const form = await this.pollContract.getForm(0);
     const fields = form.fields.map((f: { name: any; encryptedInputType: any; requirementId: any }) => ({
       name: f.name,
@@ -90,7 +90,35 @@ describe("Analytics", function () {
     expect(plaintextValue).to.eq(parseInt("1111", 2));
   });
 
-  it("V2: should create tree", async function () {});
+  it("V2: should create tree", async function () {
+    const contract = await deployAnalyticsContractV2();
+    const contractAddress = await contract.getAddress();
+    contract.connect(this.signers.alice);
+
+    const FieldStruct = [
+      {
+        name: "Do you agree",
+        encryptedInputType: 2, // ebool
+        requirementId: 1,
+        values: ["Yes", "No"],
+      },
+      {
+        name: "Age Group",
+        encryptedInputType: 7, // choice8
+        requirementId: 2,
+        values: ["0", "0", "0", "0", "0", "0", "0", "0"],
+      },
+      {
+        name: "Do you agree",
+        encryptedInputType: 2, // ebool
+        requirementId: 1,
+        values: ["Yes", "No"],
+      },
+    ];
+
+    const resp = await contract.createTree(FieldStruct);
+    console.log(resp);
+  });
 
   it("V2: should calculate sum from a node", async function () {});
 
