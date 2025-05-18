@@ -117,15 +117,17 @@ contract AnalyticsV2 is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, Gatewa
     // NOTE Should only be called in batches
     function appendToTree(Node[] memory tree, IForm.Field[] memory fields, IForm.FormData memory formData) public {
         for (uint i = 0; i < fields.length; i++) {
-          if (fields[i].encryptedInputType == IForm.EncryptedInputType.Eaddress) {
-            eaddress encryptedAddress = TFHE.asEaddress(formData.inputs[i], formData.inputProof);
-        } else if (fields[i].encryptedInputType == IForm.EncryptedInputType.Ebool) {
-            TFHE.asEbool(formData.inputs[i], formData.inputProof);
-        } else if (fields[i].encryptedInputType == IForm.EncryptedInputType.Euint64) {
+            // if (fields[i].encryptedInputType == IForm.EncryptedInputType.Eaddress) {
+            //     eaddress encryptedAddress = TFHE.asEaddress(formData.inputs[i], formData.inputProof);
+            // } else if (fields[i].encryptedInputType == IForm.EncryptedInputType.Ebool) {
+            //     TFHE.asEbool(formData.inputs[i], formData.inputProof);
+            // } else if (fields[i].encryptedInputType == IForm.EncryptedInputType.Euint64) {
+            //     euint64 encryptedEuint = TFHE.asEuint64(formData.inputs[i], formData.inputProof);
+            // } else if (fields[i].encryptedInputType == IForm.EncryptedInputType.Ebytes64) {
+            //     ebytes64 encryptedEbytes = TFHE.asEbytes64(formData.inputs[i], formData.inputProof);
+            // }
             euint64 encryptedEuint = TFHE.asEuint64(formData.inputs[i], formData.inputProof);
-        } else if (fields[i].encryptedInputType == IForm.EncryptedInputType.Ebytes64) {
-            ebytes64 encryptedEbytes = TFHE.asEbytes64(formData.inputs[i], formData.inputProof);
-        }
+
         }
     }
 
