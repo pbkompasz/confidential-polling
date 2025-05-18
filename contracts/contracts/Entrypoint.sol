@@ -1,13 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { Poll } from "./Poll.sol";
+import "./Poll.sol";
 import { Benchmark } from "./Benchmark.sol";
 import { IEvent } from "./interfaces/IEvent.sol";
 import { Identity } from "./Identity.sol";
 import { IForm } from "./interfaces/IForm.sol";
+import { Storage } from "./Storage.sol";
+import { MyContract } from "./MyContract.sol";
+import "hardhat/console.sol";
 
 contract Entrypoint {
+
+    event PollCreated(address indexed sender, address newValue);
+
     enum EventType {
         Benchmark,
         Poll
@@ -22,17 +28,22 @@ contract Entrypoint {
 
     _Event[] private events;
     Identity private identityRegistry;
+    address private identityRegistryAddress;
+    Storage private onchainStorage;
+    address private onchainStorageAddress;
 
     constructor(address passportVerifierAddress, address emailVerifierAddress) {
-        // Create identity registry
         identityRegistry = new Identity(passportVerifierAddress, emailVerifierAddress);
+        identityRegistryAddress = address(identityRegistry);
+        // onchainStorage = new Storage();
+        // onchainStorageAddress = address(onchainStorage);
     }
 
     function createPoll(
         string memory _name,
         string memory _description,
         uint256 _maximumParticpants,
-        uint8 _evaulationBatch,
+        uint8 _evaluationBatch,
         IEvent.EvaluationType _evaluationType,
         IEvent.ValidationType _validationType,
         IEvent.StorageType _storageType,
@@ -44,13 +55,14 @@ contract Entrypoint {
             _name,
             _description,
             _maximumParticpants,
-            _evaulationBatch,
+            _evaluationBatch,
             _evaluationType,
             _validationType,
             _storageType,
             _minSubmissions,
             _requirePassportValidation,
-            _requireEmailValidation
+            _requireEmailValidation//,
+            // onchainStorageAddress
         );
         _Event memory ev = _Event({
             eventType: EventType.Poll,
@@ -59,8 +71,8 @@ contract Entrypoint {
             admin: msg.sender
         });
         events.push(ev);
+        emit PollCreated(msg.sender, address(poll));
 
-        return address(poll);
     }
 
     function addPoll(address pollAddress) public {

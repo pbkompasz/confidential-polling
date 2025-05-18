@@ -1,26 +1,41 @@
 import { Admin, DataTemplate, Event } from './types';
 
+export const ENTRYPOINT_ADDRESS = import.meta.env.VITE_ENTRYPOINT_ADDRESS;
+export const VERIFIER_EMAIL = import.meta.env.VITE_ZK_EMAIL_VERIFIER_EMAIL;
+export const VERIFIER_URL = import.meta.env.VITE_ZK_EMAIL_VERIFIER_URL;
+export const ZK_PASSPORT_VERIFIER_ADDRESS = import.meta.env
+  .VITE_ZK_PASSPORT_VERIFIER_ADDRESS;
+
+export const BENCHMARK = 0;
+export const POLL = 1;
+
 const DemographicInformationTemplate: DataTemplate = {
   name: 'Demographic Information',
   fields: [
     {
-      type: 'LIST_SINGLE',
-      required: true,
-      values: ['Male', 'Female'],
-      label: 'Gender',
-      id: 0
+      type: 'OPTION',
+      values: [
+        {
+          value: '0',
+          name: 'Male',
+        },
+        {
+          value: '1',
+          name: 'Female',
+        },
+      ],
+      description: 'Gender',
+      name: '',
     },
     {
       type: 'STRING',
-      required: true,
-      label: 'Current location',
-      id: 0
+      description: 'Current location',
+      name: '',
     },
     {
-      type: 'DATE',
-      required: true,
-      label: 'Date of Birth',
-      id: 0
+      description: 'Date of Birth',
+      name: '',
+      type: 'NUMBER',
     },
   ],
 };
@@ -29,21 +44,31 @@ const OpinionPollTemplate: DataTemplate = {
   name: 'Opinion Poll',
   fields: [
     {
+      name: 'TODO',
       type: 'BOOLEAN',
-      required: true,
-      label: 'Do you agree with the ... law?',
-      id: 0
+      description: 'Do you agree with the ... law?',
     },
   ],
 };
 
-const OpinionPoll: Event = {
+export const OpinionPoll: Event = {
+  address: '',
   admin: {} as Admin,
-  type: 'POLLING',
+  type: 'POLL',
   participants: [],
+  results: {},
   analysts: [],
-  dataTemplates: [OpinionPollTemplate, DemographicInformationTemplate],
-  status: 'UPCOMMING',
+  forms: [
+    {
+      name: 'Generic form',
+      fields: [
+        ...OpinionPollTemplate.fields,
+        ...DemographicInformationTemplate.fields,
+      ],
+    },
+  ],
+  status: 'PLANNED',
+  isThresholdMet: false,
 };
 
 const SalaryTemplate: DataTemplate = {
@@ -51,15 +76,13 @@ const SalaryTemplate: DataTemplate = {
   fields: [
     {
       type: 'NUMBER',
-      required: true,
-      label: 'What is the median salary at your company?',
-      id: 0
+      description: 'What is the median salary at your company?',
+      name: '',
     },
     {
       type: 'NUMBER',
-      required: true,
-      label: 'What is the mean salary at your company?',
-      id: 0
+      description: 'What is the mean salary at your company?',
+      name: '',
     },
   ],
 };
@@ -69,18 +92,25 @@ const BudgetTemplate: DataTemplate = {
   fields: [
     {
       type: 'NUMBER',
-      required: true,
-      label: 'Specify the R&D budget of your company?',
-      id: 0
+      description: 'Specify the R&D budget of your company?',
+      name: '',
     },
   ],
 };
 
-const CompanyBenchmark: Event = {
+export const CompanyBenchmark: Event = {
+  address: '',
   admin: {} as Admin,
   type: 'BENCHMARK',
   participants: [],
+  results: {},
   analysts: [],
-  dataTemplates: [SalaryTemplate, BudgetTemplate],
-  status: 'UPCOMMING',
+  forms: [
+    {
+      name: 'Other form',
+      fields: [...SalaryTemplate.fields, ...BudgetTemplate.fields],
+    },
+  ],
+  status: 'PLANNED',
+  isThresholdMet: false,
 };

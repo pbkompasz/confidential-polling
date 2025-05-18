@@ -5,14 +5,31 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await hre.getNamedAccounts();
   const { deploy } = hre.deployments;
 
-  const deployed = await deploy("MyConfidentialERC20", {
+  // const leanIMT = await deploy("LeanIMT", {
+  //   from: deployer,
+  //   log: true,
+  // });
+
+  const deployed = await deploy("Entrypoint", {
     from: deployer,
-    args: ["Naraggara", "NARA"],
+    args: ["0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"],
     log: true,
+    // libraries: {
+    //   "contracts/lean-imt/LeanIMT.sol:LeanIMT": leanIMT.address,
+    // },
+  });
+  const deployedPoll = await deploy("Poll", {
+    from: deployer,
+    args: ["My poll", "Just polling", 100, 20, 0, 0, 0, 10, true, true],
+    log: true,
+    gasLimit: 3_000_000,
+    // libraries: {
+    //   "contracts/lean-imt/LeanIMT.sol:LeanIMT": leanIMT.address,
+    // },
   });
 
-  console.log(`MyConfidentialERC20 contract: `, deployed.address);
+  console.log(`Entrypoint contract: `, deployed.address);
 };
 export default func;
-func.id = "deploy_confidentialERC20"; // id required to prevent reexecution
-func.tags = ["MyConfidentialERC20"];
+func.id = "deploy_entrypoint"; // id required to prevent reexecution
+func.tags = ["Entrypoint"];

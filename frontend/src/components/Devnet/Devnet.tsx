@@ -47,7 +47,7 @@ export const Devnet = ({ account }: DevnetProps) => {
   return (
     <div>
       <dl>
-        <button onClick={() => encrypt(1337)}>Encrypt 1337</button>
+        <button className='text-white' onClick={() => encrypt(1337)}>Encrypt 1337</button>
         <dt className="Devnet__title">This is an encryption of 1337:</dt>
         <dd className="Devnet__dd">
           <pre className="Devnet__pre">

@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import useEvent from '@/useEvent';
+import useEvent from '@/hooks/useEvent';
 import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts';
 import {
   ChartConfig,
@@ -22,7 +22,7 @@ import {
 
 const Analytics = () => {
   const { eventId } = useParams();
-  const { selectedEvent, events } = useEvent(eventId);
+  const { selectedEvent, events } = useEvent();
 
   const constraints = [
     {
@@ -53,7 +53,7 @@ const Analytics = () => {
   return (
     <div className="p-2">
       <div className="flex gap-2 items-center">
-        <h1>Analytics {eventId}</h1>
+        <p className='text-2xl'>{eventId} Results</p>
         <Select>
           <SelectTrigger className="w-[320px] mt-[5px] text-white">
             <SelectValue

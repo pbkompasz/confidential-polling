@@ -1,23 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-// import { IForm } from "./interfaces/IForm.sol";
+import { IForm } from "./interfaces/IForm.sol";
 import "fhevm/lib/TFHE.sol";
 import "fhevm/config/ZamaFHEVMConfig.sol";
 import "fhevm/config/ZamaGatewayConfig.sol";
 import "fhevm/gateway/GatewayCaller.sol";
 
-
 contract Analytics is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCaller {
-    uint8 BINARY_SEPARATOR = 10;
-    uint8 CHOICE2_SEPARATOR = 10;
-    uint8 CHOICE4_SEPARATOR = 100;
-    uint16 CHOICE8_SEPARATOR = 1000;
     euint8 bINARY_SEPARATOR_ENCRYPTED;
     euint8 cHOICE2_SEPARATOR_ENCRYPTED;
     euint8 cHOICE4_SEPARATOR_ENCRYPTED;
     euint16 cHOICE8_SEPARATOR_ENCRYPTED;
-    euint16 constraint;
+    euint16 encryptedConstraint;
 
     enum QueryOperation {
         SUM,
@@ -38,82 +33,63 @@ contract Analytics is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayC
         TFHE.allowThis(cHOICE8_SEPARATOR_ENCRYPTED);
     }
 
-    // function createQueryConstraint(
-    //     IForm.Field[] memory fields,
-    //     uint256[] memory constraintFields,
-    //     uint8[] memory constraintValues //,
-    // ) public view returns (uint16) {
-    //     uint16 constraint;
-    //     for (uint i = 0; i < constraintFields.length; i++) {
-    //         IForm.Field memory field = fields[constraintFields[i]];
-    //         if (field.encryptedInputType == IForm.EncryptedInputType.Ebool) {
-    //             constraint = constraint * BINARY_SEPARATOR + constraintValues[i];
-    //         } else if (field.encryptedInputType == IForm.EncryptedInputType.Choice2) {
-    //             constraint = constraint * CHOICE2_SEPARATOR + constraintValues[i];
-    //         } else if (field.encryptedInputType == IForm.EncryptedInputType.Choice4) {
-    //             constraint = constraint * CHOICE4_SEPARATOR + constraintValues[i];
-    //         } else if (field.encryptedInputType == IForm.EncryptedInputType.Choice8) {
-    //             constraint = constraint * CHOICE8_SEPARATOR + constraintValues[i];
-    //         }
-    //     }
+    function createQueryConstraint(
+        IForm.Field[] memory fields,
+        uint256[] memory constraintFields,
+        uint8[] memory constraintValues //,
+    ) public view returns (uint16) {
+        uint16 constraint = 0;
+        for (uint i = 0; i < constraintFields.length; i++) {
+            IForm.Field memory field = fields[constraintFields[i]];
+            if (field.encryptedInputType == IForm.EncryptedInputType.Ebool) {
+                constraint = (constraint << 1) | constraintValues[i];
+            } else if (field.encryptedInputType == IForm.EncryptedInputType.Choice2) {
+                constraint = (constraint << 1) | constraintValues[i];
+            } else if (field.encryptedInputType == IForm.EncryptedInputType.Choice4) {
+                constraint = (constraint << 2) | constraintValues[i];
+            } else if (field.encryptedInputType == IForm.EncryptedInputType.Choice8) {
+                constraint = (constraint << 3) | constraintValues[i];
+            }
+        }
 
-    //     return constraint;
-    // }
+        return constraint;
+    }
 
     /**
      *  Create the values that will be XOR with the constraint
      */
     function createEncryptedQueryConstraint(
-        // IForm.Field[] memory fields,
+        IForm.Field[] memory fields,
         uint256[] memory constraintFields,
-        einput input,
-        bytes calldata inputProof // IForm.FormData memory data
+        IForm.FormData memory data
     ) public {
-        // TFHE.allowThis(bINARY_SEPARATOR_ENCRYPTED);
-        // require(
-        //     TFHE.isSenderAllowed(bINARY_SEPARATOR_ENCRYPTED),
-        //     "The caller is not authorized to access this encrypted amount."
-        // );
-        euint16 value = TFHE.asEuint16(input, inputProof);
-        TFHE.allowThis(value);
-        // require(TFHE.isSenderAllowed(constraint), "The caller is not authorized to access this encrypted amount2.");
+        encryptedConstraint = TFHE.asEuint16(0);
         for (uint i = 0; i < constraintFields.length; i++) {
-            // IForm.Field memory field = fields[constraintFields[i]];
-        //     if (field.encryptedInputType == IForm.EncryptedInputType.Ebool) {
-        //         // euint16 value = TFHE.asEuint16(input, inputProof);
-        //         // TFHE.allowThis(value);
-        //         // constraint = TFHE.mul(
-        //         //     constraint,
-        //         //     TFHE.add(bINARY_SEPARATOR_ENCRYPTED, value)
-        //         // );
-        //         // TFHE.mul(bINARY_SEPARATOR_ENCRYPTED, bINARY_SEPARATOR_ENCRYPTED);
-        //     } else if (field.encryptedInputType == IForm.EncryptedInputType.Choice2) {
-        //         // constraint = TFHE.mul(
-        //         //     constraint,
-        //         //     TFHE.add(cHOICE2_SEPARATOR_ENCRYPTED, TFHE.asEuint16(data.inputs[i], data.inputProof))
-        //         // );
-        //     } else if (field.encryptedInputType == IForm.EncryptedInputType.Choice4) {
-        //         // constraint = TFHE.mul(
-        //         //     constraint,
-        //         //     TFHE.add(cHOICE4_SEPARATOR_ENCRYPTED, TFHE.asEuint16(data.inputs[i], data.inputProof))
-        //         // );
-        //     } else if (field.encryptedInputType == IForm.EncryptedInputType.Choice8) {
-        //         // constraint = TFHE.mul(
-        //         //     constraint,
-        //         //     TFHE.add(cHOICE8_SEPARATOR_ENCRYPTED, TFHE.asEuint16(data.inputs[i], data.inputProof))
-        //         // );
-        //     }
+            IForm.Field memory field = fields[constraintFields[i]];
+            euint16 value = TFHE.asEuint16(data.inputs[i], data.inputProof);
+            if (field.encryptedInputType == IForm.EncryptedInputType.Ebool) {
+                encryptedConstraint = TFHE.or(TFHE.shl(encryptedConstraint, 1), value);
+            } else if (field.encryptedInputType == IForm.EncryptedInputType.Choice2) {
+                encryptedConstraint = TFHE.or(TFHE.shl(encryptedConstraint, 1), value);
+            } else if (field.encryptedInputType == IForm.EncryptedInputType.Choice4) {
+                encryptedConstraint = TFHE.or(TFHE.shl(encryptedConstraint, 2), value);
+            } else if (field.encryptedInputType == IForm.EncryptedInputType.Choice8) {
+                encryptedConstraint = TFHE.or(TFHE.shl(encryptedConstraint, 3), value);
+            }
         }
+    }
 
-        // return constraint;
+    function getEncryptedConstraint() public view returns (euint16) {
+      return encryptedConstraint;
     }
 
     // TODO Check cache
     // Return value?
     // TODO Batches
+    // TODO Check if storage contains data
     function sum(
-        // IForm.Field[] memory fields,
-        // IForm.FormData[] memory data,
+        IForm.Field[] memory fields,
+        IForm.FormData[] memory data,
         uint256[] memory constraintFields,
         uint8[] memory constraintValues
     ) public {

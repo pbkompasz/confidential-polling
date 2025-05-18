@@ -9,18 +9,43 @@ interface Analyst extends User {}
 
 interface Participant extends User {}
 
-type EventType = 'POLLING' | 'BENCHMARK';
-type EventStatus = 'UPCOMMING' | 'UPEN' | 'ANALYSING' | 'FINALIZED';
+export type EventType = 'POLL' | 'BENCHMARK';
+export type EventStatus = 'PLANNED' | 'LIVE' | 'COMPLETED';
+export type FieldType = 'OPTION' | 'BOOLEAN' | 'NUMBER' | 'STRING' | "ADDRESS";
+
+export interface Field {
+  name: string;
+  description: string;
+  type: FieldType;
+  values?: {
+    value: string | boolean;
+    name: string;
+  }[];
+}
 
 export interface Event {
+  eventAddress: string;
   admin: Admin;
   type: EventType;
   participants: Participant[];
   analysts: Analyst[];
-  dataTemplates: DataTemplate[];
+  results: {};
+  forms: {
+    name: string;
+    fields: Field[];
+  }[];
+  emailValidationReqquired?: boolean;
+  passportValidationReqquired?: boolean;
   status: EventStatus;
   participantThreshold?: number;
   isThresholdMet: boolean;
+}
+
+export type EventListItem = {
+  eventType: number;
+  eventAddress: string;
+  host: string;
+  admin: string;
 }
 
 /**
@@ -29,21 +54,7 @@ export interface Event {
  */
 export type DataTemplate = {
   name: string;
-  fields: DataField[];
-};
-
-export type DataField = {
-  id: number;
-  type:
-    | 'LIST_SINGLE'
-    | 'LIST_MULTIPLE'
-    | 'NUMBER'
-    | 'DATE'
-    | 'BOOLEAN'
-    | 'STRING';
-  values?: any[];
-  required: boolean;
-  label: string;
+  fields: Field[];
 };
 
 export type DataSubmission = {

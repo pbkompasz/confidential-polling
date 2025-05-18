@@ -22,8 +22,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 import { Badge } from '@/components/ui/badge';
-import useEvent from '@/useEvent';
+import useEvent from '@/hooks/useEvent';
 import { toast } from 'sonner';
+import { useEffect } from 'react';
 
 const Event = () => {
   const { eventId } = useParams();
@@ -35,7 +36,12 @@ const Event = () => {
     editEvent,
     cancelEvent,
     viewResults,
-  } = useEvent(eventId);
+    selectEvent,
+  } = useEvent();
+
+  useEffect(() => {
+    selectEvent(eventId);
+  }, []);
 
   // NOTE Admins can submit their own polls/benchmarks
   const isAdmin = true;
@@ -57,10 +63,10 @@ const Event = () => {
             <>Event</>
           )}
         </h1>
-        <Badge variant="outline" className="max-h-[20px]">
+        <Badge variant="outline" className="max-h-[20px] mr-auto">
           {selectedEvent?.status}
         </Badge>
-        <Select>
+        {/* <Select>
           <SelectTrigger className="w-[180px] mt-[5px] text-white mr-auto">
             <SelectValue className="text-white" placeholder="Select a form" />
           </SelectTrigger>
@@ -74,7 +80,7 @@ const Event = () => {
               ))}
             </SelectGroup>
           </SelectContent>
-        </Select>
+        </Select> */}
         {selectedEvent?.results && selectedEvent?.status === 'COMPLETED' && (
           <Button onClick={() => viewResults()} disabled={!selectedEvent}>
             View results

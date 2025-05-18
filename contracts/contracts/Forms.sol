@@ -26,12 +26,6 @@ contract Forms is Ownable, IForm {
         FALSE = TFHE.asEbool(false);
     }
 
-    function _createForm(Field[] memory _fields) internal view onlyOwner returns (Form memory) {
-        Form memory f = Form({ fields: _fields });
-
-        return f;
-    }
-
     function createField(
         string memory name,
         EncryptedInputType encryptedInputType,

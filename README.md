@@ -1,7 +1,5 @@
 # Confidential Benchmarking and Polling
 
-## About
-
 ## Features
 
 - Confidential benchmarking and polling
@@ -105,6 +103,11 @@ To connect to the Sepolia contracts run
 
 ```bash
 docker compose -f docker-compose.test.yml up
+```
+
+Create demo polls and benchmarks
+```
+npx hardhat create-events --contract ${ENTRYPOINT_CONTRACT_ADDRESS} --network ${'localhost' | 'sepolia'}
 ```
 
 ## Known issues/TODOs

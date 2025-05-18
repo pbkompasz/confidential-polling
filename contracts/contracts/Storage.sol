@@ -19,26 +19,22 @@ contract Storage {
         bytes inputProof;
     }
 
-    // Each user has a  has a dynamic incremental merkle tree
-    mapping(address => mapping(uint256 => LeanIMTData)) dataTracker;
-    mapping(address => mapping(address => mapping(uint256 => uint))) submissions;
-    // Event -> Form -> User submission
-    mapping(address => mapping(address => mapping(uint256 => EncryptedData))) encryptedData;
+    // eventAddress => formId => IMT
+    mapping(address => mapping(uint256 => LeanIMTData)) offchainData;
+    // eventAddress => formId => user => formData[]
+    mapping(address => mapping(uint256 => mapping(address => IForm.FormData[]))) onchainData;
 
     constructor() {}
 
-    function insert(uint256 formId, uint256 dataHash) public {
-        // Check if user hasn't laready submitted
-        // Event's id: msg.sender
-        // Submitter: tx.origin
-        uint256 resp = LeanIMT.insert(dataTracker[msg.sender][formId], dataHash);
-        submissions[tx.origin][msg.sender][formId] = resp;
+    function insert(IForm.Form calldata form, uint256 dataHash) public {
+        LeanIMT.insert(offchainData[msg.sender][form.id], dataHash);
     }
 
-    function insert(uint256 formId, einput[] calldata inputs, bytes calldata inputProof) public {
-        // Event's id: msg.sender
-        // Submitter: tx.origin
-        EncryptedData memory encrypted = EncryptedData({ inputs: inputs, inputProof: inputProof });
-        encryptedData[msg.sender][tx.origin][formId] = encrypted;
+    function insert(IForm.Form calldata form, IForm.FormData calldata formData) public {
+        onchainData[msg.sender][form.id][tx.origin].push(formData);
+    }
+
+    function createEventEntry() public {
+        msg.sender;
     }
 }

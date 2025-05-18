@@ -6,6 +6,7 @@ import "fhevm/lib/TFHE.sol";
 interface IForm {
     struct Form {
         Field[] fields;
+        uint256 id;
     }
 
     struct FormData {

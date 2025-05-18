@@ -30,6 +30,8 @@ contract Event is Forms, IEvent {
     uint256 private minSubmissions = 0;
     uint256 private lastSubmissionEvaluated;
 
+    Storage private onchainStorage;
+
     constructor(
         string memory _name,
         string memory _description,
@@ -40,24 +42,23 @@ contract Event is Forms, IEvent {
         StorageType _storageType,
         uint256 _minSubmissions,
         bool _requirePassportValidation,
-        bool _requireEmailValidation
+        bool _requireEmailValidation//,
+        // address _onchainStorageAddress
     ) {
-        require(_maximumParticpants > 0);
-        name = _name;
-        description = _description;
-        maximumParticiants = _maximumParticpants;
-        evaluationBatch = _evaulationBatch;
-        evaluationType = _evaluationType;
-        validationType = _validationType;
-        storageType = _storageType;
-        status = Status.Created;
-        if (_storageType == StorageType.Offchain) {
-            // Initialize IMT
-            require(true);
-        }
-        minSubmissions = _minSubmissions;
-        requiresEmailValdation = _requireEmailValidation;
-        requiresPassportValdation = _requirePassportValidation;
+        // require(_maximumParticpants > 0);
+        // name = _name;
+        // description = _description;
+        // maximumParticiants = _maximumParticpants;
+        // evaluationBatch = _evaulationBatch;
+        // evaluationType = _evaluationType;
+        // validationType = _validationType;
+        // storageType = _storageType;
+        // status = Status.Created;
+        // minSubmissions = _minSubmissions;
+        // requiresEmailValdation = _requireEmailValidation;
+        // requiresPassportValdation = _requirePassportValidation;
+        // onchainStorage = Storage(_onchainStorageAddress);
+        // onchainStorage.createEventEntry();
     }
 
     function initEvent() public onlyOwner {
@@ -95,21 +96,19 @@ contract Event is Forms, IEvent {
      */
     function exportResult() public view {}
 
-    /**
-     *
-     * @param formId Form id
-     * @param dataHash Hash of the submitted form data
-     */
-    function submitData(uint256 formId, uint256 dataHash) public {
+    function submitData(Form calldata form, uint256 dataHash) public {
         // Lazy data validity checking
         require(validationType == ValidationType.Lazy);
         // Lazy evaluation
         require(evaluationType == EvaluationType.Lazy);
         // Off-chain storage, we need to append the Merkle tree
         require(storageType == StorageType.Offchain);
+        // TODO Save to IMT
+
+        onchainStorage.insert(form, dataHash);
     }
 
-    function submitData(Form memory form, FormData memory formData) public {
+    function submitData(Form calldata form, FormData calldata formData) internal {
         // Off-chain storage, we need to append the Merkle tree
         require(storageType == StorageType.Onchain && storageType == StorageType.Hybrid);
 
@@ -120,6 +119,8 @@ contract Event is Forms, IEvent {
         } else if (validationType == ValidationType.Eager) {
             validateFormData(form, formData);
         }
+
+        onchainStorage.insert(form, formData);
     }
 
     function validateFormData(Form memory form, FormData memory formData) private {
@@ -129,6 +130,12 @@ contract Event is Forms, IEvent {
         }
     }
 
+    /**
+     *
+     * Mark data as ready to evaluate
+     * @param form  Form
+     * @param formData  Form data
+     */
     function evaluateFormData(Form memory form, FormData memory formData) private {
         bytes memory inputProof = formData.inputProof;
         for (uint i = 0; i < form.fields.length; i++) {
@@ -136,8 +143,6 @@ contract Event is Forms, IEvent {
             Field memory field = form.fields[i];
             if (field.encryptedInputType == EncryptedInputType.Eaddress) {
                 eaddress encryptedAddress = TFHE.asEaddress(input, inputProof);
-                // TODO Do the thing, it should be defined in the Analytics.sol and call some generic function
-                // defined by the analytics user
             } else if (field.encryptedInputType == EncryptedInputType.Ebool) {
                 TFHE.asEbool(input, inputProof);
             } else if (field.encryptedInputType == EncryptedInputType.Euint64) {
