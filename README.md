@@ -1,5 +1,7 @@
 # Confidential Benchmarking and Polling
 
+[Demo video](https://vimeo.com/1087068508/6370681246?share=copy)
+
 ## Features
 
 - Confidential benchmarking and polling
@@ -9,10 +11,7 @@
 - Custom analytics:
 
 ## Architecture
-
-<!-- TODO Pic
-  frontend(self, zkemail, etc.) -> onchain, hybrid(IMT) or offchain(IMT) storage -> (polling or benchmarking -> event(check status, etc.) -> form (validation, evaluation) -> Store the result in a relation database -> Back to the frontend
- -->
+![Untitled-2024-10-29-2230-2](https://github.com/user-attachments/assets/c1f40057-92e9-4376-8930-7b19afeff978)
 
 To offer a fast, provable, and cost-efficient solution, we use Incremental Merkle Trees (IMTs).
 The whole architecture is modular and can accept different configuration variables:
