@@ -127,6 +127,9 @@ Create demo polls and benchmarks
 ```
 npx hardhat create-events --contract ${ENTRYPOINT_CONTRACT_ADDRESS} --network ${'localhost' | 'sepolia'}
 ```
+<!-- TODO
+  tasks
+ -->
 
 ## Known issues/TODOs
 
