@@ -6,6 +6,10 @@ const { ethers } = require("ethers");
 const app = express();
 const PORT = 3000;
 
+// Config
+// EMAIL_ENABLED=false for hardhat
+// DEFAULT_BATCH_SIZE=20
+
 // Enable CORS for all origins
 app.use(cors());
 
@@ -18,6 +22,8 @@ app.get("/", (req, res) => {
 });
 
 const emailVerifications = [];
+
+const batch = [];
 
 const createVerificationRequest = () => {
   const min = 100000;
@@ -75,12 +81,18 @@ app.post("/register", (req, res) => {
 app.post("/submit", (req, res) => {
   const data = req.body;
   let tx, storageId;
+  // Set status to received onchain
+
   if (data.storageType === "OFFCHAIN") {
     // Save locally
     // Hash it
-    // Save hash onchain
   } else {
-    // Send data directly to onchain
+    // Send data directly to onchain in a batch
+    batch.push(data.data);
+    if (batch.length == DEFAULT_BATCH_SIZE) {
+      // await contract.submitBatch(batch);
+      batch = [];
+    }
   }
 
   res.json({
@@ -89,13 +101,6 @@ app.post("/submit", (req, res) => {
     storageId,
   });
 });
-
-
-
-const verifySignature = (message, signature) => {
-  const recoveredAddress = ethers.utils.verifyMessage(message, signature);
-  return recoveredAddress; // should match the user's wallet address
-};
 
 // Start the server
 app.listen(PORT, () => {

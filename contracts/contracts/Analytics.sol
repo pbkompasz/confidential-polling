@@ -6,8 +6,9 @@ import "fhevm/lib/TFHE.sol";
 import "fhevm/config/ZamaFHEVMConfig.sol";
 import "fhevm/config/ZamaGatewayConfig.sol";
 import "fhevm/gateway/GatewayCaller.sol";
+import { IAnalytics } from "./interfaces/IAnalytics.sol";
 
-contract Analytics is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCaller {
+contract Analytics is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCaller, IAnalytics {
     euint8 bINARY_SEPARATOR_ENCRYPTED;
     euint8 cHOICE2_SEPARATOR_ENCRYPTED;
     euint8 cHOICE4_SEPARATOR_ENCRYPTED;
