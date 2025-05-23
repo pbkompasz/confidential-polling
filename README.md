@@ -15,17 +15,20 @@
  -->
 
 To offer a fast, provable, and cost-efficient solution, we use Incremental Merkle Trees (IMTs).
-
-The initial data is stored off-chain and is fetched when analytics query is requested. Data is submitted for computation in batches, including only the parts required for that computation. This data is sent via calldata, which is pruned from the full node, making it more cost-effective.
+The whole architecture is modular and can accept different configuration variables:
+- data storage: onchain or offchain
+- evaluation type, eager or lazy
+- validation type: eager or lazy validation
+The encrypted data is submitted by a bundler and is either stored offchain or onchain. Data is submitted for computation in batches. This data is sent via calldata, which is pruned from the full node, making it more cost-effective.
 
 The poll/benchmark event proceeds through three stages:
-
 - Planned stage: After a host creates a poll or benchmark event, it enters this stage during which users cannot submit data.
-- Live stage: Users submit encrypted data to the poll. Depending on the configuration, the data can be processed either immediately upon submission or after the event concludes.
+- Live stage: Users submit encrypted data to the poll. Depending on the configuration, the data can be validated and processed either immediately upon submission or after the event concludes.
 - Completed stage: The data is evaluated (if not processed continuously during the live stage), and analysts can query the data based on custom constraints. These queries are cached, so the data does not need to be recalculated in the future.
 
 ### Analytics
 
+#### Old architecture based on binary strings
 An analyst can request constrained counts on poll forms and constrained operations (SUM, AVG, MAX, MIN, COUNT) on benchmark data.  
 The analyst specifies the constraint fields; given this and the input types, we create a binary uint. Then we iterate over every submitted data point, XOR them, cache the response, and return the value.
 
@@ -52,7 +55,20 @@ This results in an approximate complexity of `O(n*2 + n*2^noConstraint)`, which 
 
 This approach is really convenient when we want to add or remove a constraint. It would take up to 3 bit-shifts left or right and an addition.
 
-Other ideas that could work include creating a **"search tree"**, where each branch represents a possible constraint value. Then at each child node, we would have a data structure that accumulates the values. The downside is that we would have to push data into multiple branches to avoid revealing other submitters to the current submitter and store an encrypted flag to notify if a value is valid or just a decoy. Or a bundler can submit the data.
+#### Search trees
+
+We create a search tree based on the fields of a form, where each field has a node level and each node is a possible field value.
+For example a form with the following tree fields gender, age group(3 possible values) and a T/F field has the following tree:
+                              ROOT
+                      /                 \
+Gender                0                  1
+                  /   |   \          /   |   \   
+Age group        0    1    2        0    1    2       
+                / \  / \  / \      / \  / \  / \     
+T/F            0  1 0   1 0  1     0  1 0  1 0  1
+
+This tree is generated when the form is created and when a data is submitted it is inserted in the corresponding end node which contain an array of the encrypted data or the hash of the encrypted data. Later when we want to calculate the COUNT of the Female correspondents, from the 2nd age group that voted yes we can only go over the values in the corresponding node.
+The only downside to this architecture is that the submitter knows their field values and can see who else submitted the form with the same values. To fix this the data is submitted by a bundler in batches.
 
 ## Data Validation
 
@@ -60,12 +76,11 @@ The submitted data is verified both in the dApp interface before submission and 
 There are two validation types: **eager** and **lazy**.
 
 - **Eager validation** means that data is validated at submission time, for each submission individually.
-- **Lazy validation** means that data is either validated at the end of the survey or in batches while the survey is ongoing.
+- **Lazy validation** means that data is either validated at the end of the survey
 
 ## Scalability
 
 By opting to use the most favorable settings (lazy evaluation with lazy validation), and thanks to Incremental Merkle Trees and batched execution, the survey can support a high number of participants.
-
 You can check the benchmarks below where the estimated gas costs and execution times are presented for various numbers of participants, e.g., 1000.
 
 The complexity of creating an analytics query is:
