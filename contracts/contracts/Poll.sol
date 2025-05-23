@@ -10,26 +10,37 @@ import { IEvent } from "./interfaces/IEvent.sol";
 import { IForm } from "./interfaces/IForm.sol";
 
 contract Poll is SepoliaZamaFHEVMConfig, IPoll, IEvent, IForm, Ownable {
-    Form[] private forms;
+    uint256 constant MIN_SUBMISSIONS = 10;
+    uint8 constant MAX_FIELDS = 10;
+
+    EvaluationType private evaluationType;
+    ValidationType private validationType;
+    StorageType private storageType;
+    Status private status;
+
+    string private name;
+    string private description;
 
     bool private requiresPassportValdation;
     bool private requiresEmailValdation;
 
-    Status private status;
-    uint256 constant MIN_SUBMISSIONS = 10;
-    string private name;
-    string private description;
     uint256 private maximumParticipants;
-    EvaluationType private evaluationType;
-    ValidationType private validationType;
-    StorageType private storageType;
-    uint8 private evaluationBatch = 1;
-
-    Submission[] private submissions;
+    uint256 private evaluationBatch = 1;
     uint256 private minSubmissions = 0;
     uint256 private lastSubmissionEvaluated;
 
+    Submission[] private submissions;
     address[] analysts;
+    Form[] private forms;
+    RequirementBytes[] requirementsBytes;
+    RequirementAddress[] requirementsAddress;
+    RequirementUint[] requirementsEuint;
+
+    // This are confidential constants that have to be defined at runtime
+    euint8 ZERO;
+    euint8 ONE;
+    ebool TRUE;
+    ebool FALSE;
 
     /**
      * Create the bit fields for each binary constraint
@@ -49,6 +60,7 @@ contract Poll is SepoliaZamaFHEVMConfig, IPoll, IEvent, IForm, Ownable {
         bool _requireEmailValidation //, // address _onchainStorageAddress
     ) Ownable(tx.origin) {
         require(_maximumParticpants > 0);
+
         name = _name;
         description = _description;
         maximumParticipants = _maximumParticpants;
@@ -60,6 +72,12 @@ contract Poll is SepoliaZamaFHEVMConfig, IPoll, IEvent, IForm, Ownable {
         minSubmissions = _minSubmissions;
         requiresEmailValdation = _requireEmailValidation;
         requiresPassportValdation = _requirePassportValidation;
+
+        ZERO = TFHE.asEuint8(0);
+        ONE = TFHE.asEuint8(1);
+        TRUE = TFHE.asEbool(true);
+        FALSE = TFHE.asEbool(false);
+
         // onchainStorage = Storage(_onchainStorageAddress);
         // onchainStorage.createEventEntry();
     }
@@ -86,60 +104,27 @@ contract Poll is SepoliaZamaFHEVMConfig, IPoll, IEvent, IForm, Ownable {
         }
     }
 
-    function editField(uint256 formId) public onlyOwner {
-        require(false);
-    }
-
+    /**
+     * Remove a field from a form
+     * TODO
+     * @param formId Form id
+     * @param fieldId Field id
+     */
     function removeField(uint256 formId, uint256 fieldId) public onlyOwner {
         require(false);
     }
 
-    function getForm(uint256 formId) public view returns (Form memory) {
-        return forms[formId];
-    }
-
-    function getForms() public view returns (Form[] memory) {
-        return forms;
-    }
-
-    function getDetails()
-        public
-        view
-        returns (string memory name, Status, string memory eventType, uint256 noParticipants, bool, bool)
-    {
-        return (name, status, "POLL", 0, requiresEmailValdation, requiresPassportValdation);
-    }
-
-    function getDetailsFull() public view returns (EventDetails memory) {
-        return
-            EventDetails({
-                name: name,
-                description: description,
-                host: owner(),
-                maximumParticipants: maximumParticipants,
-                evaluationType: evaluationType,
-                validationType: validationType,
-                storageType: storageType,
-                evaluationBatch: evaluationBatch,
-                minSubmissions: minSubmissions,
-                lastSubmissionEvaluated: lastSubmissionEvaluated,
-                eventType: "POLL",
-                requiresEmailValdation: requiresEmailValdation,
-                requiresPassportValdation: requiresPassportValdation,
-                status: status,
-                // participationThreshold: participationThreshold,
-                participationThreshold: 0,
-                // isThresholdMet: isThresholdMet,
-                isThresholdMet: true,
-                eventAddress: address(this)
-            });
-    }
-
+    /**
+     * Start event
+     */
     function startEvent() public {
         require(status == Status.Planned);
         status = Status.Live;
     }
 
+    /**
+     * Stop event
+     */
     function stopEvent() public {
         require(status == Status.Live);
         require(submissions.length > MIN_SUBMISSIONS);
@@ -148,23 +133,6 @@ contract Poll is SepoliaZamaFHEVMConfig, IPoll, IEvent, IForm, Ownable {
         }
         status = Status.Completed;
     }
-
-    function evaluateEvent() public onlyOwner {
-        require(status == Status.Completed);
-        require(evaluationType == EvaluationType.Lazy);
-        // Go over fields and create possible binary values in plaintext
-        // Go over all submitted formData and create statistics
-    }
-
-    function getStatus() public view returns (Status) {
-        return status;
-    }
-
-    /**
-     * When analyst wants to run a query, they have to pull an evaluation status(which data is ready to be processed), then through the Storage contract they
-     * can request the data.
-     */
-    function getEvaluationStatus() public {}
 
     /**
      *
@@ -184,21 +152,28 @@ contract Poll is SepoliaZamaFHEVMConfig, IPoll, IEvent, IForm, Ownable {
         // onchainStorage.insert(form, dataHash);
     }
 
-    function submitData(Form calldata form, FormData calldata formData) internal {
+    /**
+     * Submit data in batches
+     * TODO This should only be the hashes and a pointer to storage entry
+     * or insert through this IDK
+     * @param form Form
+     * @param formData Form data
+     */
+    function submitData(Form calldata form, FormData calldata formData) public {
         // Off-chain storage, we need to append the Merkle tree
-        require(storageType == StorageType.Onchain && storageType == StorageType.Hybrid);
+        require(storageType == StorageType.Onchain || storageType == StorageType.Hybrid);
+        // Check the batch size meets minimum
 
-        // Batching
-        if (evaluationType == EvaluationType.Eager) {
-            validateFormData(form, formData);
-            // evaluateFormData(form, formData);
-        } else if (validationType == ValidationType.Eager) {
-            validateFormData(form, formData);
-        }
+        validateFormData(form, formData);
 
         // onchainStorage.insert(form, formData);
     }
 
+    /**
+     * Validate form data
+     * @param form Form
+     * @param formData Form data, an array of einputs w/ input proof
+     */
     function validateFormData(Form memory form, FormData memory formData) private {
         require(form.fields.length == formData.inputs.length);
         for (uint i = 0; i < form.fields.length; i++) {
@@ -206,72 +181,37 @@ contract Poll is SepoliaZamaFHEVMConfig, IPoll, IEvent, IForm, Ownable {
         }
     }
 
-    /**
-     *
-     * Mark data as ready to evaluate
-     * @param form  Form
-     * @param formData  Form data
-     */
-    function evaluateFormData(Form memory form, FormData memory formData) private {
-        bytes memory inputProof = formData.inputProof;
-        for (uint i = 0; i < form.fields.length; i++) {
-            einput input = formData.inputs[i];
-            Field memory field = form.fields[i];
-            if (field.encryptedInputType == EncryptedInputType.Eaddress) {
-                eaddress encryptedAddress = TFHE.asEaddress(input, inputProof);
-            } else if (field.encryptedInputType == EncryptedInputType.Ebool) {
-                TFHE.asEbool(input, inputProof);
-            } else if (field.encryptedInputType == EncryptedInputType.Euint64) {
-                euint64 encryptedEuint = TFHE.asEuint64(input, inputProof);
-            } else if (field.encryptedInputType == EncryptedInputType.Ebytes64) {
-                ebytes64 encryptedEbytes = TFHE.asEbytes64(input, inputProof);
-            }
-        }
-    }
-
-    RequirementBytes[] requirementsBytes;
-    RequirementAddress[] requirementsAddress;
-    RequirementUint[] requirementsEuint;
-
-    uint8 constant MAX_FIELDS = 10;
-
-    // This are confidential constants that have to be defined at runtime
-    euint8 ZERO;
-    euint8 ONE;
-    ebool TRUE;
-    ebool FALSE;
-
-    // ZERO = TFHE.asEuint8(0);
-    // ONE = TFHE.asEuint8(1);
-    // TRUE = TFHE.asEbool(true);
-    // FALSE = TFHE.asEbool(false);
-
-    function createField(
-        string memory name,
-        EncryptedInputType encryptedInputType,
-        uint256 requirementId,
-        string[] memory values
-    ) public view onlyOwner returns (Field memory) {
-        Field memory field = Field(name, encryptedInputType, requirementId, values);
-        if (field.encryptedInputType == EncryptedInputType.Eaddress) {
-            require(requirementId < requirementsAddress.length);
-        } else if (field.encryptedInputType == EncryptedInputType.Euint64) {
-            require(requirementId < requirementsEuint.length);
-        } else if (field.encryptedInputType == EncryptedInputType.Ebytes64) {
-            require(requirementId < requirementsBytes.length);
-        }
-        return field;
-    }
+    // TODO Move to analytics
+    // /**
+    //  *
+    //  * Mark data as ready to evaluate
+    //  * @param form  Form
+    //  * @param formData  Form data
+    //  */
+    // function evaluateFormData(Form memory form, FormData memory formData) private {
+    //     bytes memory inputProof = formData.inputProof;
+    //     for (uint i = 0; i < form.fields.length; i++) {
+    //         einput input = formData.inputs[i];
+    //         Field memory field = form.fields[i];
+    //         if (field.encryptedInputType == EncryptedInputType.Eaddress) {
+    //             eaddress encryptedAddress = TFHE.asEaddress(input, inputProof);
+    //         } else if (field.encryptedInputType == EncryptedInputType.Ebool) {
+    //             TFHE.asEbool(input, inputProof);
+    //         } else if (field.encryptedInputType == EncryptedInputType.Euint64) {
+    //             euint64 encryptedEuint = TFHE.asEuint64(input, inputProof);
+    //         } else if (field.encryptedInputType == EncryptedInputType.Ebytes64) {
+    //             ebytes64 encryptedEbytes = TFHE.asEbytes64(input, inputProof);
+    //         }
+    //     }
+    // }
 
     /**
-     * Check all the submitted data
+     * Validate field based on encrypted data
+     * This is done by checking if it can be cast and that it passes the requirements
+     * @param field Field
+     * @param input Ecnrypted input
+     * @param inputProof Input proof
      */
-    function validateForm(Form memory form, einput input, bytes calldata inputProof) public {
-        for (uint i = 0; i < form.fields.length; i++) {
-            validateField(form.fields[i], input, inputProof);
-        }
-    }
-
     function validateField(Field memory field, einput input, bytes memory inputProof) public {
         if (field.encryptedInputType == EncryptedInputType.Eaddress) {
             eaddress encryptedAddress = TFHE.asEaddress(input, inputProof);
@@ -346,7 +286,10 @@ contract Poll is SepoliaZamaFHEVMConfig, IPoll, IEvent, IForm, Ownable {
      * @param requirementId Requirement id
      * @param encrytpedEbytes64 Encrypted bytest64
      */
-    function validateEbytes64(uint256 requirementId, ebytes64 encrytpedEbytes64) private returns (ebool, bool) {
+    function validateEbytes64(
+        uint256 requirementId,
+        ebytes64 encrytpedEbytes64
+    ) private returns (ebool encryptedPassed, bool passed) {
         assert(requirementId < requirementsBytes.length);
         RequirementBytes memory requirement = requirementsBytes[requirementId];
         if (requirement.forbiddenValues.length == 0) {
@@ -365,6 +308,11 @@ contract Poll is SepoliaZamaFHEVMConfig, IPoll, IEvent, IForm, Ownable {
         return (TFHE.select(TFHE.eq(toAdd, ZERO), TRUE, FALSE), false);
     }
 
+    /**
+     * Get role of a user
+     * TODO return enum
+     * @param userAddress User address
+     */
     function getEventUserRole(address userAddress) public view returns (string memory) {
         if (userAddress == owner()) {
             return "HOST";
@@ -375,5 +323,102 @@ contract Poll is SepoliaZamaFHEVMConfig, IPoll, IEvent, IForm, Ownable {
             }
         }
         return "USER";
+    }
+
+    /**
+     * Get form by id
+     */
+    function getForm(uint256 formId) public view returns (Form memory _form) {
+        return forms[formId];
+    }
+
+    /**
+     * Get forms
+     */
+    function getForms() public view returns (Form[] memory _forms) {
+        return forms;
+    }
+
+    /**
+     * Get details
+     * @return _name
+     * @return _status
+     * @return _eventType
+     * @return _noParticipants
+     * @return _requiresEmailValdation
+     * @return _requiresPassportValdation
+     */
+    function getDetails()
+        public
+        view
+        returns (
+            string memory _name,
+            Status _status,
+            string memory _eventType,
+            uint256 _noParticipants,
+            bool _requiresEmailValdation,
+            bool _requiresPassportValdation
+        )
+    {
+        return (name, status, "POLL", 0, requiresEmailValdation, requiresPassportValdation);
+    }
+
+    /**
+     * Get all details
+     */
+    function getDetailsFull() public view returns (EventDetails memory) {
+        return
+            EventDetails({
+                name: name,
+                description: description,
+                host: owner(),
+                maximumParticipants: maximumParticipants,
+                evaluationType: evaluationType,
+                validationType: validationType,
+                storageType: storageType,
+                evaluationBatch: evaluationBatch,
+                minSubmissions: minSubmissions,
+                lastSubmissionEvaluated: lastSubmissionEvaluated,
+                eventType: "POLL",
+                requiresEmailValdation: requiresEmailValdation,
+                requiresPassportValdation: requiresPassportValdation,
+                status: status,
+                // participationThreshold: participationThreshold,
+                participationThreshold: 0,
+                // isThresholdMet: isThresholdMet,
+                isThresholdMet: true,
+                eventAddress: address(this)
+            });
+    }
+
+    /**
+     * Create a field
+     * @param _name Name of the field
+     * @param encryptedInputType Encrypted input type
+     * @param requirementId Requirement id
+     * @param values Possible values
+     */
+    function createField(
+        string memory _name,
+        EncryptedInputType encryptedInputType,
+        uint256 requirementId,
+        string[] memory values
+    ) private view onlyOwner returns (Field memory) {
+        Field memory field = Field(_name, encryptedInputType, requirementId, values);
+        if (field.encryptedInputType == EncryptedInputType.Eaddress) {
+            require(requirementId < requirementsAddress.length);
+        } else if (field.encryptedInputType == EncryptedInputType.Euint64) {
+            require(requirementId < requirementsEuint.length);
+        } else if (field.encryptedInputType == EncryptedInputType.Ebytes64) {
+            require(requirementId < requirementsBytes.length);
+        }
+        return field;
+    }
+
+    /**
+     * Get status of the poll e.g. planned, live, completed
+     */
+    function getStatus() public view returns (Status) {
+        return status;
     }
 }
