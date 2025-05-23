@@ -59,6 +59,7 @@ This approach is really convenient when we want to add or remove a constraint. I
 
 We create a search tree based on the fields of a form, where each field has a node level and each node is a possible field value.
 For example a form with the following tree fields gender, age group(3 possible values) and a T/F field has the following tree:
+```
                               ROOT
                       /                 \
 Gender                0                  1
@@ -66,6 +67,7 @@ Gender                0                  1
 Age group        0    1    2        0    1    2       
                 / \  / \  / \      / \  / \  / \     
 T/F            0  1 0   1 0  1     0  1 0  1 0  1
+```
 
 This tree is generated when the form is created and when a data is submitted it is inserted in the corresponding end node which contain an array of the encrypted data or the hash of the encrypted data. Later when we want to calculate the COUNT of the Female correspondents, from the 2nd age group that voted yes we can only go over the values in the corresponding node.
 The only downside to this architecture is that the submitter knows their field values and can see who else submitted the form with the same values. To fix this the data is submitted by a bundler in batches.
