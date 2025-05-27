@@ -1,6 +1,8 @@
 # Confidential Benchmarking and Polling
 
-[Demo video](https://vimeo.com/1087068508/6370681246?share=copy)
+<center>
+  <a href='https://vimeo.com/1087068508/6370681246?share=copy'> Demo video </a>
+</center>
 
 ## Features
 
